@@ -1,0 +1,143 @@
+/* theme/portalGradientBackground.css
+ * Ambient portal wash: two soft corner blobs (per spec §12.1) plus a fixed
+ * arrangement of organic "brush stroke" gradients that recolour instantly via
+ * the --portal-* custom properties — same geometry for every portal, only the
+ * theme tokens change.
+ */
+
+.portal-gradient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: var(--bg-base);
+}
+
+.portal-gradient-bg::before,
+.portal-gradient-bg::after {
+  content: '';
+  position: absolute;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  filter: blur(120px);
+}
+
+.portal-gradient-bg::before {
+  top: -20%;
+  left: -10%;
+  background: radial-gradient(circle, var(--portal-500) 0%, transparent 70%);
+  opacity: 0.35;
+}
+
+.portal-gradient-bg::after {
+  bottom: -25%;
+  right: -15%;
+  background: radial-gradient(circle, var(--portal-700) 0%, transparent 70%);
+  opacity: 0.25;
+}
+
+[data-theme='light'] .portal-gradient-bg::before {
+  opacity: 0.16;
+}
+[data-theme='light'] .portal-gradient-bg::after {
+  opacity: 0.12;
+}
+
+/* ---- Brush strokes layer ---- */
+.portal-gradient-strokes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.portal-gradient-strokes path {
+  transition:
+    stroke 400ms ease,
+    opacity 400ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.portal-stroke-a {
+  stroke: var(--portal-500);
+  opacity: 0.5;
+}
+.portal-stroke-b {
+  stroke: var(--portal-300);
+  opacity: 0.32;
+}
+.portal-stroke-c {
+  stroke: var(--portal-700);
+  opacity: 0.4;
+}
+
+[data-theme='light'] .portal-stroke-a {
+  opacity: 0.22;
+}
+[data-theme='light'] .portal-stroke-b {
+  opacity: 0.16;
+}
+[data-theme='light'] .portal-stroke-c {
+  opacity: 0.18;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .portal-gradient-bg--animated::before {
+    animation: gradientDriftA 22s ease-in-out infinite alternate;
+  }
+  .portal-gradient-bg--animated::after {
+    animation: gradientDriftB 26s ease-in-out infinite alternate;
+  }
+  .portal-gradient-bg--animated .portal-stroke-a {
+    animation: strokeDriftA 30s ease-in-out infinite alternate;
+  }
+  .portal-gradient-bg--animated .portal-stroke-b {
+    animation: strokeDriftB 34s ease-in-out infinite alternate;
+  }
+  .portal-gradient-bg--animated .portal-stroke-c {
+    animation: strokeDriftC 38s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes gradientDriftA {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(6vw, 4vh) scale(1.08);
+  }
+}
+@keyframes gradientDriftB {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(-5vw, -6vh) scale(1.05);
+  }
+}
+@keyframes strokeDriftA {
+  from {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate(1.5%, -1%) rotate(1.2deg);
+  }
+}
+@keyframes strokeDriftB {
+  from {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate(-1.2%, 1.4%) rotate(-1deg);
+  }
+}
+@keyframes strokeDriftC {
+  from {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate(1%, 1.2%) rotate(0.8deg);
+  }
+}

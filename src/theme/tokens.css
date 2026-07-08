@@ -1,0 +1,202 @@
+:root {
+  /* ---- Neutral & Surface (Dark Mode Default) ---- */
+  --bg-base: #09090f;
+  --bg-subtle: #0d0e1a;
+  --bg-surface-1: rgba(255, 255, 255, 0.04);
+  --bg-surface-2: rgba(255, 255, 255, 0.07);
+  --bg-surface-3: rgba(255, 255, 255, 0.1);
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-focus: var(--portal-500);
+
+  --text-primary: #e8e9f3;
+  --text-secondary: #9a9bbf;
+  --text-tertiary: #5c5d7a;
+  --text-disabled: #3d3e55;
+  --text-inverse: #09090f;
+
+  /* ---- Nav / glass chrome (sidebar, command palette) — theme-aware ---- */
+  --nav-glass-bg: rgba(13, 14, 26, 0.75);
+  --nav-glass-bg-strong: rgba(13, 14, 26, 0.92);
+  --nav-shadow: 4px 0 32px rgba(0, 0, 0, 0.3);
+  --scrim: rgba(0, 0, 0, 0.6);
+
+  /* ---- Status (Universal) ---- */
+  --status-success-500: #22c55e;
+  --status-success-100: #dcfce7;
+  --status-warning-500: #f59e0b;
+  --status-warning-100: #fef3c7;
+  --status-error-500: #ef4444;
+  --status-error-100: #fee2e2;
+  --status-info-500: #3b82f6;
+  --status-info-100: #dbeafe;
+
+  /* ---- Spacing (4px grid) ---- */
+  --space-0: 0px;
+  --space-8: 32px;
+  --space-0-5: 2px;
+  --space-10: 40px;
+  --space-1: 4px;
+  --space-12: 48px;
+  --space-1-5: 6px;
+  --space-14: 56px;
+  --space-2: 8px;
+  --space-16: 64px;
+  --space-3: 12px;
+  --space-20: 80px;
+  --space-4: 16px;
+  --space-24: 96px;
+  --space-5: 20px;
+  --space-32: 128px;
+  --space-6: 24px;
+  --space-40: 160px;
+
+  /* ---- Border Radius ---- */
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+  --radius-full: 9999px;
+
+  /* ---- Duration ---- */
+  --duration-instant: 50ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-moderate: 350ms;
+  --duration-slow: 500ms;
+  --duration-slower: 700ms;
+  --duration-cinematic: 1200ms;
+
+  /* ---- Easing ---- */
+  --ease-linear: cubic-bezier(0, 0, 1, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- Z-Index ---- */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-sidebar: 100;
+  --z-dropdown: 200;
+  --z-sticky-nav: 300;
+  --z-modal-bg: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-toast: 700;
+  --z-tooltip: 800;
+  --z-spotlight: 900;
+  --z-cursor: 1000;
+}
+
+[data-theme='light'] {
+  --bg-base: #f5f5fa;
+  --bg-subtle: #eeeef7;
+  --bg-surface-1: rgba(255, 255, 255, 0.7);
+  --bg-surface-2: rgba(255, 255, 255, 0.9);
+  --bg-surface-3: #ffffff;
+  --bg-overlay: rgba(0, 0, 0, 0.35);
+
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-default: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.2);
+
+  --text-primary: #131320;
+  --text-secondary: #4a4b6a;
+  --text-tertiary: #8a8baa;
+  --text-disabled: #c0c1d8;
+
+  --nav-glass-bg: rgba(255, 255, 255, 0.75);
+  --nav-glass-bg-strong: rgba(255, 255, 255, 0.92);
+  --nav-shadow: 4px 0 32px rgba(0, 0, 0, 0.08);
+  --scrim: rgba(20, 20, 30, 0.4);
+}
+
+/* ---- Portal Identity Maps — set data-portal on <html> or <body> ---- */
+[data-portal='public'] {
+  --portal-50: #f0eeff;
+  --portal-100: #ddd9ff;
+  --portal-200: #bdb5ff;
+  --portal-300: #9d8fff;
+  --portal-400: #7c68ff;
+  --portal-500: #6c63ff;
+  --portal-600: #5a4fe0;
+  --portal-700: #4539c0;
+  --portal-800: #302899;
+  --portal-900: #1c1766;
+}
+[data-portal='admin'] {
+  --portal-50: #e6fffe;
+  --portal-100: #ccfffe;
+  --portal-200: #99fff9;
+  --portal-300: #5dfff3;
+  --portal-400: #1de9dc;
+  --portal-500: #00d4c8;
+  --portal-600: #00aaa0;
+  --portal-700: #008079;
+  --portal-800: #005550;
+  --portal-900: #002b28;
+}
+[data-portal='teacher'] {
+  --portal-50: #fffbea;
+  --portal-100: #fff3c4;
+  --portal-200: #ffe68a;
+  --portal-300: #ffd54f;
+  --portal-400: #ffc107;
+  --portal-500: #ffb300;
+  --portal-600: #ff8f00;
+  --portal-700: #e65100;
+  --portal-800: #bf360c;
+  --portal-900: #7b1900;
+}
+[data-portal='student'] {
+  --portal-50: #e8fff3;
+  --portal-100: #c3ffe0;
+  --portal-200: #85f5bc;
+  --portal-300: #4ae89b;
+  --portal-400: #1dd97a;
+  --portal-500: #00c85b;
+  --portal-600: #00a04a;
+  --portal-700: #007836;
+  --portal-800: #005025;
+  --portal-900: #002812;
+}
+[data-portal='parent'] {
+  --portal-50: #fff0f3;
+  --portal-100: #ffd6de;
+  --portal-200: #ffadbf;
+  --portal-300: #ff84a0;
+  --portal-400: #ff6584;
+  --portal-500: #ff3d68;
+  --portal-600: #d42b55;
+  --portal-700: #a81a3e;
+  --portal-800: #7c0a28;
+  --portal-900: #500016;
+}
+
+/* ---- Portal-tinted glow wash for nav chrome (originally §12.2's top-bar wash;
+   the standalone top bar was removed, so the sidebar wears this now) ---- */
+.portal-glow-wash {
+  position: relative;
+}
+.portal-glow-wash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, var(--portal-700) 0%, transparent 45%);
+  opacity: 0.2;
+  pointer-events: none;
+}
+.portal-glow-wash > * {
+  position: relative;
+  z-index: 1;
+}
