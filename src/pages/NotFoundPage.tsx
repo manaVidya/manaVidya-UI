@@ -18,7 +18,6 @@ export default function NotFoundPage() {
         justifyContent: 'center',
         minHeight: '100vh',
         gap: 3,
-        background: '#0D0E1A',
         p: 4,
       }}
     >
@@ -34,13 +33,13 @@ export default function NotFoundPage() {
           textAlign: 'center',
         }}
       >
-        <ErrorOutlined sx={{ fontSize: 72, color: 'rgba(108,99,255,0.5)' }} />
+        <ErrorOutlined sx={{ fontSize: 72, color: 'var(--portal-400)', opacity: 0.6 }} />
         <Typography
           variant="h1"
           sx={{
             fontWeight: 800,
             fontSize: { xs: '5rem', md: '8rem' },
-            color: '#6C63FF',
+            color: 'var(--portal-500)',
             lineHeight: 1,
           }}
         >
@@ -57,7 +56,7 @@ export default function NotFoundPage() {
           size="large"
           id="back-home-btn"
           onClick={() => {
-            void navigate('/login');
+            void navigate('/');
           }}
           sx={{ mt: 2 }}
         >

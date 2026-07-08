@@ -1,0 +1,35 @@
+import { create } from 'zustand';
+import type { AuthUser, PortalKey } from '../types/rbac';
+import { ROLE_PERMISSIONS } from '../lib/rolePermissions';
+
+interface AuthState {
+  user: AuthUser | null;
+  isLoading: boolean;
+  themeMode: 'dark' | 'light';
+  setUser: (user: AuthUser | null) => void;
+  setLoading: (loading: boolean) => void;
+  toggleThemeMode: () => void;
+  switchPortal: (portal: PortalKey) => void;
+  setActiveChild: (childId: string) => void;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  isLoading: false,
+  themeMode: 'dark',
+  setUser: (user) => set({ user, isLoading: false }),
+  setLoading: (isLoading) => set({ isLoading }),
+  toggleThemeMode: () => set((s) => ({ themeMode: s.themeMode === 'dark' ? 'light' : 'dark' })),
+  switchPortal: (portal) => {
+    const current = get().user;
+    if (!current || !current.roles.includes(portal)) return;
+    set({ user: { ...current, portal, permissions: ROLE_PERMISSIONS[portal] } });
+  },
+  setActiveChild: (childId) => {
+    const current = get().user;
+    if (!current || !current.children?.some((c) => c.id === childId)) return;
+    set({ user: { ...current, activeChildId: childId } });
+  },
+  logout: () => set({ user: null }),
+}));
