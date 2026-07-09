@@ -24,4 +24,6 @@ export interface AuthUser {
   children?: ChildSummary[];
   /** Which linked child's data is currently in view (parent portal only) */
   activeChildId?: string;
+  /** True for auto-generated DOB passwords that haven't been changed yet */
+  mustResetPassword?: boolean;
 }
