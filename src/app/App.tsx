@@ -4,21 +4,19 @@ import { Box, CircularProgress } from '@mui/material';
 import router from '../router';
 import { useAuth } from '../hooks/useAuth';
 import { fetchCurrentUser } from '../lib/authApi';
-import { getAccessToken, clearTokens } from '../lib/tokenStorage';
 
 export default function App() {
   const { isBootstrapping, setUser, setBootstrapped } = useAuth();
 
   useEffect(() => {
-    if (!getAccessToken()) {
-      setBootstrapped();
-      return;
-    }
+    // The access token never survives a fresh page load (it's memory-only, by design —
+    // see lib/authToken.ts). This probe rides the httpOnly refresh cookie, if any, via the
+    // silent 401-refresh dance in lib/api.ts to find out whether there's a live session.
     fetchCurrentUser()
       .then(setUser)
-      .catch(() => clearTokens())
+      .catch(() => {})
       .finally(setBootstrapped);
-    // Runs once on app mount to restore the session from a stored access token.
+    // Runs once on app mount to restore the session from the refresh cookie, if present.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
