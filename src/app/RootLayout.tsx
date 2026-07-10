@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { createAppTheme } from '../theme/createAppTheme';
 import type { PortalKey as ThemePortalKey } from '../theme/portalPalettes';
 import { PortalGradientBackground } from '../components/foundation/PortalGradientBackground';
+import { ToastViewport } from '../components/feedback/ToastViewport';
 
 function resolvePortalFromPath(pathname: string): ThemePortalKey {
   if (pathname.startsWith('/admin')) return 'admin';
@@ -39,6 +40,7 @@ export function RootLayout() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <PortalGradientBackground />
+      <ToastViewport />
       <Outlet />
     </ThemeProvider>
   );

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { AuthUser, PortalKey } from '../types/rbac';
 import { ROLE_PERMISSIONS } from '../lib/rolePermissions';
-import { clearTokens } from '../lib/tokenStorage';
+import { logout as logoutApi } from '../lib/authApi';
 
 interface AuthState {
   user: AuthUser | null;
@@ -38,7 +38,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: { ...current, activeChildId: childId } });
   },
   logout: () => {
-    clearTokens();
+    // Clear the local session immediately for a snappy UI; revoke it server-side
+    // (and drop the refresh cookie) in the background.
     set({ user: null });
+    void logoutApi();
   },
 }));

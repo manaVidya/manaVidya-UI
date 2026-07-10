@@ -1,8 +1,9 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { lazy, Suspense, type ReactNode } from 'react';
 import { CircularProgress, Box } from '@mui/material';
 import { RootLayout } from '../app/RootLayout';
 import { RequirePortal } from '../app/RequirePortal';
+import { PublicOnlyRoute } from '../app/PublicOnlyRoute';
 import { AppShellSidebar } from '../layouts/sidebar/AppShellSidebar';
 
 const LandingPage = lazy(() => import('../pages/public/LandingPage'));
@@ -76,8 +77,25 @@ const router = createBrowserRouter([
     path: '/',
     element: <RootLayout />,
     children: [
-      { index: true, element: s(<LandingPage />) },
-      { path: 'login', element: s(<LoginPage />) },
+      // Landing page needs scroll work before it's ready to be the front door again —
+      // opens straight into the login screen for now. Still reachable at /home meanwhile.
+      {
+        index: true,
+        element: (
+          <PublicOnlyRoute>
+            <Navigate to="/login" replace />
+          </PublicOnlyRoute>
+        ),
+      },
+      {
+        path: 'login',
+        element: s(
+          <PublicOnlyRoute>
+            <LoginPage />
+          </PublicOnlyRoute>,
+        ),
+      },
+      { path: 'home', element: s(<LandingPage />) },
       {
         path: 'admin',
         element: (
