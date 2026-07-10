@@ -1,73 +1,130 @@
-import { Box, Typography, Stack, Card, CardActionArea } from '@mui/material';
+import { useState, type FormEvent } from 'react';
+import {
+  Box,
+  Typography,
+  Stack,
+  Card,
+  TextField,
+  Button,
+  Alert,
+  Link as MuiLink,
+} from '@mui/material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, GraduationCap, Users, UserRound } from 'lucide-react';
-import type { ElementType } from 'react';
 import { slideUp, staggerContainer } from '../../lib/motion';
 import { useAuth } from '../../hooks/useAuth';
-import { ROLE_PERMISSIONS } from '../../lib/rolePermissions';
-import { MOCK_CHILDREN } from '../../lib/mockData';
-import type { PortalKey } from '../../types/rbac';
-import { PORTAL_LABELS } from '../../theme/portalPalettes';
-
-/**
- * Dev-only role → multi-role mapping. Demonstrates the two multi-role cases
- * called out in the spec: Admin previewing every portal, and a Teacher who
- * is also a parent at the same school (types/rbac.ts's own example).
- */
-const ROLES_FOR: Record<PortalKey, PortalKey[]> = {
-  admin: ['admin', 'teacher', 'parent', 'student'],
-  teacher: ['teacher', 'parent'],
-  parent: ['parent'],
-  student: ['student'],
-};
+import * as authApi from '../../lib/authApi';
+import { getErrorMessage } from '../../lib/getErrorMessage';
 
 const MotionStack = motion(Stack);
-const MotionCard = motion(Card);
 
-interface PortalOption {
-  portal: PortalKey;
-  icon: ElementType;
-  name: string;
-  description: string;
-}
+type Step = 'login' | 'reset-request' | 'reset-confirm';
 
-const PORTAL_OPTIONS: PortalOption[] = [
-  {
-    portal: 'admin',
-    icon: ShieldCheck,
-    name: 'Admin',
-    description: 'Full platform management & oversight',
-  },
-  { portal: 'teacher', icon: Users, name: 'Teacher', description: 'Classes, attendance, grading' },
-  { portal: 'parent', icon: UserRound, name: 'Parent', description: "Track your child's progress" },
-  {
-    portal: 'student',
-    icon: GraduationCap,
-    name: 'Student',
-    description: 'Assignments, results, timetable',
-  },
-];
+const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { setUser, logout } = useAuth();
 
-  function enterAs(portal: PortalKey) {
-    const roles = ROLES_FOR[portal];
-    const hasChildren = roles.includes('parent');
+  const [step, setStep] = useState<Step>('login');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-    setUser({
-      id: `dev-${portal}`,
-      name: PORTAL_LABELS[portal],
-      mobileNumber: '+91 90000 00000',
-      portal,
-      roles,
-      permissions: ROLE_PERMISSIONS[portal],
-      children: hasChildren ? MOCK_CHILDREN : undefined,
-      activeChildId: hasChildren ? MOCK_CHILDREN[0].id : undefined,
-    });
-    void navigate(`/${portal}`);
+  function resetMessages() {
+    setError(null);
+    setNotice(null);
+  }
+
+  async function handleLogin(e: FormEvent) {
+    e.preventDefault();
+    resetMessages();
+
+    if (!MOBILE_PATTERN.test(mobileNumber)) {
+      setError('Enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const user = await authApi.login(mobileNumber, password);
+
+      if (user.mustResetPassword) {
+        // Don't hand out a portal session on a first-login DOB password —
+        // force a verified reset before the account is usable.
+        logout();
+        setNotice('First login detected. Set a new password to continue.');
+        await authApi.forgotPassword(mobileNumber);
+        setStep('reset-confirm');
+        return;
+      }
+
+      setUser(user);
+      void navigate(`/${user.portal}`);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Invalid mobile number or password.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function sendResetCode() {
+    resetMessages();
+
+    if (!MOBILE_PATTERN.test(mobileNumber)) {
+      setError('Enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { message } = await authApi.forgotPassword(mobileNumber);
+      setNotice(message);
+      setStep('reset-confirm');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleRequestReset(e: FormEvent) {
+    e.preventDefault();
+    void sendResetCode();
+  }
+
+  async function handleConfirmReset(e: FormEvent) {
+    e.preventDefault();
+    resetMessages();
+
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await authApi.resetPassword(mobileNumber, otp, newPassword);
+      setPassword('');
+      setOtp('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setNotice('Password updated. Log in with your new password.');
+      setStep('login');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Invalid or expired OTP.'));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -85,71 +142,172 @@ export default function LoginPage() {
         initial="hidden"
         animate="visible"
         spacing={4}
-        sx={{ alignItems: 'center', maxWidth: 720, width: '100%' }}
+        sx={{ alignItems: 'center', maxWidth: 420, width: '100%' }}
       >
         <motion.div variants={slideUp} style={{ textAlign: 'center' }}>
           <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
             Welcome to ManaVidya
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Dev preview — pick a portal to explore its screens. Real authentication lands with the
-            backend.
+            {step === 'login' && 'Log in with your registered mobile number.'}
+            {step === 'reset-request' && "Enter your mobile number and we'll send a reset code."}
+            {step === 'reset-confirm' && 'Enter the code we sent and choose a new password.'}
           </Typography>
         </motion.div>
 
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-            gap: 2.5,
-            width: '100%',
-          }}
-        >
-          {PORTAL_OPTIONS.map(({ portal, icon: Icon, name, description }) => (
-            <motion.div key={portal} variants={slideUp}>
-              <MotionCard
-                whileHover={{ y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                data-portal={portal}
-                sx={{
-                  borderRadius: 3,
-                  overflow: 'hidden',
-                  border: '1px solid var(--portal-500)',
-                  background: 'var(--bg-surface-1)',
-                }}
-              >
-                <CardActionArea onClick={() => enterAs(portal)} sx={{ p: 3 }}>
-                  <Stack spacing={1.5} sx={{ alignItems: 'flex-start' }}>
-                    <Box
-                      sx={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 2.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'linear-gradient(135deg, var(--portal-400), var(--portal-600))',
-                      }}
-                    >
-                      <Icon size={24} color="var(--text-inverse)" />
-                    </Box>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                      {name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {description}
-                    </Typography>
-                  </Stack>
-                </CardActionArea>
-              </MotionCard>
-            </motion.div>
-          ))}
-        </Box>
+        <motion.div variants={slideUp} style={{ width: '100%' }}>
+          <Card
+            sx={{
+              width: '100%',
+              borderRadius: 3,
+              p: 4,
+              border: '1px solid var(--portal-500)',
+              background: 'var(--bg-surface-1)',
+            }}
+          >
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            {notice && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {notice}
+              </Alert>
+            )}
 
-        <motion.div variants={slideUp}>
-          <Typography variant="caption" color="text.secondary">
-            Route: <code>/login</code> · four-portal dev picker
-          </Typography>
+            {step === 'login' && (
+              <Stack component="form" spacing={2.5} onSubmit={(e) => void handleLogin(e)}>
+                <TextField
+                  label="Mobile number"
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  fullWidth
+                  required
+                />
+                <TextField
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  fullWidth
+                  required
+                />
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={submitting}
+                  fullWidth
+                >
+                  {submitting ? 'Logging in…' : 'Log in'}
+                </Button>
+                <MuiLink
+                  component="button"
+                  type="button"
+                  variant="body2"
+                  underline="hover"
+                  sx={{ alignSelf: 'center' }}
+                  onClick={() => {
+                    resetMessages();
+                    setStep('reset-request');
+                  }}
+                >
+                  Forgot password?
+                </MuiLink>
+              </Stack>
+            )}
+
+            {step === 'reset-request' && (
+              <Stack component="form" spacing={2.5} onSubmit={handleRequestReset}>
+                <TextField
+                  label="Mobile number"
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  fullWidth
+                  required
+                />
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={submitting}
+                  fullWidth
+                >
+                  {submitting ? 'Sending…' : 'Send reset code'}
+                </Button>
+                <MuiLink
+                  component="button"
+                  type="button"
+                  variant="body2"
+                  underline="hover"
+                  sx={{ alignSelf: 'center' }}
+                  onClick={() => {
+                    resetMessages();
+                    setStep('login');
+                  }}
+                >
+                  Back to log in
+                </MuiLink>
+              </Stack>
+            )}
+
+            {step === 'reset-confirm' && (
+              <Stack component="form" spacing={2.5} onSubmit={(e) => void handleConfirmReset(e)}>
+                <TextField label="Mobile number" value={mobileNumber} fullWidth disabled />
+                <TextField
+                  label="6-digit code"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric"
+                  fullWidth
+                  required
+                />
+                <TextField
+                  label="New password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
+                  fullWidth
+                  required
+                />
+                <TextField
+                  label="Confirm new password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                  fullWidth
+                  required
+                />
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={submitting}
+                  fullWidth
+                >
+                  {submitting ? 'Updating…' : 'Set new password'}
+                </Button>
+                <MuiLink
+                  component="button"
+                  type="button"
+                  variant="body2"
+                  underline="hover"
+                  sx={{ alignSelf: 'center' }}
+                  onClick={() => void sendResetCode()}
+                >
+                  Resend code
+                </MuiLink>
+              </Stack>
+            )}
+          </Card>
         </motion.div>
       </MotionStack>
     </Box>

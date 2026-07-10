@@ -10,7 +10,7 @@
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "preview": "vite preview",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
