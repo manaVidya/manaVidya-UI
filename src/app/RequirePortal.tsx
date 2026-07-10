@@ -3,11 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import type { PortalKey } from '../types/rbac';
 
-/**
- * Dev-mode route guard — there is no backend session yet (see the spec's
- * Scope Note), so this only checks the mock authStore populated by the
- * portal picker on /login. Swap for a real session check once auth lands.
- */
+/** Route guard — redirects to /login when there's no session, or to the user's
+ * own portal when they're not permitted on this one. */
 export function RequirePortal({ portal, children }: { portal: PortalKey; children: ReactNode }) {
   const { user, switchPortal } = useAuth();
   const location = useLocation();

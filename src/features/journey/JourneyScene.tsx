@@ -1,174 +1,115 @@
-import { motion, useTransform } from 'framer-motion';
+import { useTransform } from 'framer-motion';
 import { useScrollProgress } from '../../hooks/useScrollProgress';
-import {
-  SkyLayer,
-  GateScene,
-  GateLeafLeft,
-  GateLeafRight,
-  PlaygroundScene,
-  VerandaScene,
-  ClassroomDoor,
-  ClassSignboard,
-  ClassroomInterior,
-  AboutSection,
-} from './scenes';
+import { JOURNEY_PHOTOS } from './journeyPhotos';
+import { PhotoLayer } from './PhotoLayer';
+import { JourneyCopy } from './JourneyCopy';
 
 export function JourneyScene() {
   const { containerRef, smoothProgress } = useScrollProgress();
 
-  // === Scene 1: Gate (0%–12%) ===
-  const gateLeftX = useTransform(smoothProgress, [0, 0.12], ['0%', '-85%']);
-  const gateRightX = useTransform(smoothProgress, [0, 0.12], ['0%', '85%']);
-  const cameraScale = useTransform(smoothProgress, [0, 0.12], [1, 1.06]);
-  const gateOpacity = useTransform(smoothProgress, [0, 0.14, 0.16], [1, 1, 0]);
+  // === Beat 1: Gate — 0% to 20% — visible immediately on load, no fade-in from blank ===
+  const gateOpacity = useTransform(smoothProgress, [0, 0.18, 0.2], [1, 1, 0]);
+  const gateScale = useTransform(smoothProgress, [0, 0.2], [1, 1.1]);
+  const gateX = useTransform(smoothProgress, [0, 0.2], ['0%', '-3%']);
+  const gateCopyOpacity = useTransform(smoothProgress, [0, 0.15, 0.18], [1, 1, 0]);
+  const gateCopyY = useTransform(smoothProgress, [0, 0.02], [0, 0]);
 
-  // === Scene 2: Courtyard & Playground (12%–30%) ===
-  const playgroundOpacity = useTransform(smoothProgress, [0.13, 0.16, 0.28, 0.3], [0, 1, 1, 0]);
-  const playgroundY = useTransform(smoothProgress, [0.12, 0.3], ['4%', '-8%']);
+  // === Beat 2: Playground — football — 19% to 40% ===
+  const actionOpacity = useTransform(smoothProgress, [0.19, 0.22, 0.37, 0.4], [0, 1, 1, 0]);
+  const actionScale = useTransform(smoothProgress, [0.19, 0.4], [1, 1.15]);
+  const actionX = useTransform(smoothProgress, [0.19, 0.4], ['0%', '3%']);
+  const actionCopyOpacity = useTransform(smoothProgress, [0.23, 0.28, 0.35, 0.38], [0, 1, 1, 0]);
+  const actionCopyY = useTransform(smoothProgress, [0.23, 0.28], [40, 0]);
 
-  // === Scene 3: Veranda Walk (30%–50%) ===
-  const verandaOpacity = useTransform(smoothProgress, [0.29, 0.32, 0.48, 0.5], [0, 1, 1, 0]);
-  const verandaScale = useTransform(smoothProgress, [0.3, 0.5], [1, 1.35]);
+  // === Beat 3: Playground equipment — 39% to 60% ===
+  const playOpacity = useTransform(smoothProgress, [0.39, 0.42, 0.57, 0.6], [0, 1, 1, 0]);
+  const playScale = useTransform(smoothProgress, [0.39, 0.6], [1.03, 1.15]);
+  const playY = useTransform(smoothProgress, [0.39, 0.6], ['0%', '-3%']);
+  const playCopyOpacity = useTransform(smoothProgress, [0.43, 0.48, 0.55, 0.58], [0, 1, 1, 0]);
+  const playCopyY = useTransform(smoothProgress, [0.43, 0.48], [40, 0]);
 
-  // === Scene 4: Classroom Door (50%–66%) ===
-  const signboardOpacity = useTransform(smoothProgress, [0.5, 0.55], [0, 1]);
-  const doorRotateY = useTransform(smoothProgress, [0.55, 0.66], [0, -85]);
-  const doorSceneOpacity = useTransform(smoothProgress, [0.49, 0.52, 0.65, 0.67], [0, 1, 1, 0]);
-
-  // === Scene 5: Classroom Interior (66%–86%) ===
-  const interiorOpacity = useTransform(smoothProgress, [0.64, 0.68], [0, 1]);
-  const benchZoom = useTransform(smoothProgress, [0.68, 0.86], [1, 1.9]);
-  const sceneBlur = useTransform(
-    smoothProgress,
-    [0.78, 0.82, 0.84, 0.86],
-    ['blur(0px)', 'blur(12px)', 'blur(12px)', 'blur(0px)'],
-  );
-
-  // === Scene 6: About Content (86%–100%) ===
-  const aboutY = useTransform(smoothProgress, [0.86, 1.0], ['60px', '0px']);
-  const aboutOpacity = useTransform(smoothProgress, [0.86, 0.93], [0, 1]);
+  // === Beat 4: Classroom — 59% to 100% (holds to the end, no beat after it) ===
+  const classroomOpacity = useTransform(smoothProgress, [0.59, 0.62, 1], [0, 1, 1]);
+  const classroomScale = useTransform(smoothProgress, [0.59, 1], [1, 1.25]);
+  const classroomX = useTransform(smoothProgress, [0.59, 1], ['0%', '-2%']);
+  const classroomCopyOpacity = useTransform(smoothProgress, [0.63, 0.68, 0.92, 0.97], [0, 1, 1, 0]);
+  const classroomCopyY = useTransform(smoothProgress, [0.63, 0.68], [40, 0]);
 
   return (
-    <div ref={containerRef} style={{ height: '700vh', position: 'relative' }}>
+    <div ref={containerRef} style={{ height: '480vh', position: 'relative' }}>
       <div
         style={{
           position: 'sticky',
           top: 0,
           height: '100vh',
           overflow: 'hidden',
-          background: '#8FCBEA',
+          background: '#09090F',
         }}
       >
-        <motion.div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
-          <SkyLayer />
-        </motion.div>
+        <PhotoLayer
+          photo={JOURNEY_PHOTOS.gate}
+          opacity={gateOpacity}
+          scale={gateScale}
+          x={gateX}
+          zIndex={1}
+          priority
+        />
+        <JourneyCopy
+          opacity={gateCopyOpacity}
+          y={gateCopyY}
+          eyebrow="ManaVidya"
+          headline="Every school day starts here."
+          subtext="One connected platform for admins, teachers, parents, and students."
+          zIndex={2}
+        />
 
-        <motion.div
-          style={{
-            opacity: gateOpacity,
-            scale: cameraScale,
-            position: 'absolute',
-            inset: 0,
-            zIndex: 2,
-          }}
-        >
-          <GateScene />
-          <motion.div style={{ x: gateLeftX, position: 'absolute', left: '27%', bottom: '8%' }}>
-            <GateLeafLeft />
-          </motion.div>
-          <motion.div style={{ x: gateRightX, position: 'absolute', right: '27%', bottom: '8%' }}>
-            <GateLeafRight />
-          </motion.div>
-        </motion.div>
+        <PhotoLayer
+          photo={JOURNEY_PHOTOS.playgroundAction}
+          opacity={actionOpacity}
+          scale={actionScale}
+          x={actionX}
+          zIndex={3}
+        />
+        <JourneyCopy
+          opacity={actionCopyOpacity}
+          y={actionCopyY}
+          eyebrow="Attendance"
+          headline="Marked once. Seen instantly."
+          subtext="Teachers mark attendance in seconds — parents see it the same day, no phone calls needed."
+          zIndex={4}
+        />
 
-        <motion.div
-          style={{
-            opacity: playgroundOpacity,
-            y: playgroundY,
-            position: 'absolute',
-            inset: 0,
-            zIndex: 3,
-          }}
-        >
-          <PlaygroundScene />
-        </motion.div>
+        <PhotoLayer
+          photo={JOURNEY_PHOTOS.playgroundEquipment}
+          opacity={playOpacity}
+          scale={playScale}
+          y={playY}
+          zIndex={5}
+        />
+        <JourneyCopy
+          opacity={playCopyOpacity}
+          y={playCopyY}
+          eyebrow="Every child"
+          headline="From the swings to the syllabus."
+          subtext="One profile per student — assignments, attendance, and results, all in one place."
+          zIndex={6}
+        />
 
-        <motion.div
-          style={{
-            opacity: verandaOpacity,
-            scale: verandaScale,
-            position: 'absolute',
-            inset: 0,
-            zIndex: 4,
-          }}
-        >
-          <VerandaScene />
-        </motion.div>
-
-        <motion.div
-          style={{
-            opacity: doorSceneOpacity,
-            position: 'absolute',
-            inset: 0,
-            zIndex: 5,
-            background: '#E4D9BE',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <div style={{ position: 'relative' }}>
-            <motion.div
-              style={{
-                opacity: signboardOpacity,
-                position: 'absolute',
-                top: -84,
-                left: '50%',
-                transform: 'translateX(-50%)',
-              }}
-            >
-              <ClassSignboard />
-            </motion.div>
-            <motion.div
-              style={{
-                rotateY: doorRotateY,
-                transformOrigin: 'left center',
-                transformStyle: 'preserve-3d',
-              }}
-            >
-              <ClassroomDoor />
-            </motion.div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          style={{
-            opacity: interiorOpacity,
-            scale: benchZoom,
-            filter: sceneBlur,
-            position: 'absolute',
-            inset: 0,
-            zIndex: 6,
-          }}
-        >
-          <ClassroomInterior />
-        </motion.div>
-
-        <motion.div
-          style={{
-            opacity: aboutOpacity,
-            y: aboutY,
-            position: 'absolute',
-            inset: 0,
-            zIndex: 7,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#09090F',
-          }}
-        >
-          <AboutSection />
-        </motion.div>
+        <PhotoLayer
+          photo={JOURNEY_PHOTOS.classroom}
+          opacity={classroomOpacity}
+          scale={classroomScale}
+          x={classroomX}
+          zIndex={7}
+        />
+        <JourneyCopy
+          opacity={classroomCopyOpacity}
+          y={classroomCopyY}
+          eyebrow="In the classroom"
+          headline="Every lesson. Every mark. Never lost."
+          subtext="Teachers grade once — results reach parents and students the same day."
+          zIndex={8}
+        />
       </div>
     </div>
   );
