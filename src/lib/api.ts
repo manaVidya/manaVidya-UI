@@ -3,7 +3,20 @@ import { getAccessToken, setAccessToken } from './authToken';
 import { useToastStore } from '../store/toastStore';
 import { getErrorMessage } from './getErrorMessage';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+// Flip VITE_USE_LOCAL_API to 'false' in .env to point this dev build at the deployed backend
+// instead of your local one (e.g. to test against staging data without running the API
+// locally). Vite only reads .env at startup, so toggling it requires restarting `npm run dev`.
+const USE_LOCAL_API = import.meta.env.VITE_USE_LOCAL_API !== 'false';
+
+const API_URL = USE_LOCAL_API
+  ? (import.meta.env.VITE_API_URL_LOCAL ?? 'http://localhost:3000')
+  : import.meta.env.VITE_API_URL_DEPLOYED;
+
+if (!API_URL) {
+  throw new Error(
+    'VITE_API_URL_DEPLOYED is not set in .env — required when VITE_USE_LOCAL_API=false.',
+  );
+}
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -69,7 +82,7 @@ function logoutAndRedirect() {
 // Dedupes concurrent 401s into a single in-flight refresh call.
 let refreshPromise: Promise<string> | null = null;
 
-async function refreshAccessToken(): Promise<string> {
+export async function refreshAccessToken(): Promise<string> {
   refreshPromise ??= axios
     .post<{ accessToken: string }>(`${API_URL}/auth/refresh`, {}, { withCredentials: true })
     .then(({ data }) => {

@@ -21,6 +21,11 @@ const MotionStack = motion(Stack);
 type Step = 'login' | 'reset-request' | 'reset-confirm';
 
 const MOBILE_PATTERN = /^[6-9]\d{9}$/;
+// Mirrors PASSWORD_POLICY_REGEX in the backend's auth.constants.ts — kept in sync so the
+// error surfaces here instead of round-tripping to the server for an avoidable 400.
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const PASSWORD_HELPER_TEXT =
+  'At least 8 characters, with an uppercase letter, a lowercase letter, a number, and a special character.';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -102,8 +107,8 @@ export default function LoginPage() {
     e.preventDefault();
     resetMessages();
 
-    if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters.');
+    if (!PASSWORD_PATTERN.test(newPassword)) {
+      setError(`New password does not meet requirements. ${PASSWORD_HELPER_TEXT}`);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -274,6 +279,7 @@ export default function LoginPage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   autoComplete="new-password"
+                  helperText={PASSWORD_HELPER_TEXT}
                   fullWidth
                   required
                 />

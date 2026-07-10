@@ -3,10 +3,13 @@ import { RouterProvider } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 import router from '../router';
 import { useAuth } from '../hooks/useAuth';
+import { useTokenKeepAlive } from '../hooks/useTokenKeepAlive';
 import { fetchCurrentUser } from '../lib/authApi';
 
 export default function App() {
   const { isBootstrapping, setUser, setBootstrapped } = useAuth();
+
+  useTokenKeepAlive();
 
   useEffect(() => {
     // The access token never survives a fresh page load (it's memory-only, by design —
