@@ -1,15 +1,38 @@
-import { Chip } from '@mui/material';
+import { useState } from 'react';
+import { Button, Chip } from '@mui/material';
+import { Plus } from 'lucide-react';
 import { PageContainer } from '../../components/data-display/PageContainer';
 import { PageHeader } from '../../components/data-display/PageHeader';
 import { DataTable } from '../../components/data-display/DataTable';
-import { MOCK_STUDENTS } from '../../lib/mockData';
+import { CreateStudentDialog } from '../../components/data-display/CreateStudentDialog';
+import { MOCK_STUDENTS, type StudentRow } from '../../lib/mockData';
 
 export default function StudentsPage() {
+  const [students, setStudents] = useState<StudentRow[]>(MOCK_STUDENTS);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogKey, setDialogKey] = useState(0);
+
+  const handleCreate = (student: StudentRow) => {
+    setStudents((prev) => [student, ...prev]);
+  };
+
   return (
     <PageContainer>
       <PageHeader
         title="Students"
-        subtitle={`${MOCK_STUDENTS.length} students in Class 5-A shown as an example roster.`}
+        subtitle={`${students.length} students on record.`}
+        action={
+          <Button
+            variant="contained"
+            startIcon={<Plus size={18} />}
+            onClick={() => {
+              setDialogKey((k) => k + 1);
+              setDialogOpen(true);
+            }}
+          >
+            Create Student
+          </Button>
+        }
       />
       <DataTable
         columns={[
@@ -38,7 +61,13 @@ export default function StudentsPage() {
           },
           { key: 'guardianPhone', label: 'Guardian Phone' },
         ]}
-        rows={MOCK_STUDENTS}
+        rows={students}
+      />
+      <CreateStudentDialog
+        key={dialogKey}
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onCreate={handleCreate}
       />
     </PageContainer>
   );

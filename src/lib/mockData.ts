@@ -37,6 +37,80 @@ export interface StudentRow {
   rollNo: string;
   attendancePct: number;
   guardianPhone: string;
+
+  // 1. Student Information
+  studentId?: string;
+  gender?: string;
+  dob?: string;
+  admissionNumber?: string;
+  admissionDate?: string;
+  bloodGroup?: string;
+  profilePhoto?: string;
+
+  // 2. Parent Information
+  fatherName?: string;
+  motherName?: string;
+  fatherPhone?: string;
+  motherPhone?: string;
+  parentEmail?: string;
+  guardianName?: string;
+  guardianRelationship?: string;
+  emergencyContact?: string;
+
+  // 3. Address
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
+
+  // 4. Academic Information
+  academicYear?: string;
+  previousSchool?: string;
+  mediumOfInstruction?: string;
+  house?: string;
+  studentStatus?: string;
+
+  // 5. Medical Information
+  age?: number;
+  heightCm?: number;
+  weightKg?: number;
+  allergies?: string;
+  medicalConditions?: string;
+  disability?: boolean;
+  doctorName?: string;
+  emergencyMedicalNotes?: string;
+
+  // 6. Identity Details
+  aadhaar?: string;
+  birthCertificateNumber?: string;
+  passportNumber?: string;
+
+  // 7. Transport
+  transportRequired?: boolean;
+  route?: string;
+  busNumber?: string;
+  pickupPoint?: string;
+
+  // 8. Fee Information
+  feeCategory?: string;
+  scholarship?: string;
+  feeConcession?: string;
+  paymentStatus?: string;
+
+  // 9. Login Information
+  username?: string;
+  password?: string;
+  email?: string;
+  accountStatus?: string;
+
+  // 10. Documents
+  aadhaarDoc?: string;
+  birthCertificate?: string;
+  transferCertificate?: string;
+  previousMarksMemo?: string;
+  medicalCertificate?: string;
 }
 
 export const MOCK_STUDENTS: StudentRow[] = [
@@ -102,6 +176,56 @@ export interface TeacherRow {
   subject: string;
   classesAssigned: string;
   phone: string;
+}
+
+export interface TeacherProfile {
+  id: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  dob: string;
+  bloodGroup?: string;
+  aadhaar?: string;
+  profilePhoto?: string;
+  mobile: string;
+  alternateMobile?: string;
+  email?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
+  department: string;
+  designation: string;
+  subjects: string[];
+  employeeType: string;
+  joiningDate?: string;
+  experience?: number;
+  qualification?: string;
+  previousSchool?: string;
+  salary?: number;
+  employmentStatus: string;
+  classes: string[];
+  sections: string[];
+  classTeacher: boolean;
+  subjectsAssigned: string[];
+  academicYear: string;
+}
+
+export function toTeacherRow(profile: TeacherProfile): TeacherRow {
+  const classesAssigned =
+    profile.classes.length > 0
+      ? profile.classes.map((cls, i) => `${cls}-${profile.sections[i] || ''}`).join(', ')
+      : '—';
+  return {
+    id: profile.id,
+    name: `${profile.firstName} ${profile.lastName}`,
+    subject: profile.subjects.join(', ') || '—',
+    classesAssigned,
+    phone: profile.mobile,
+  };
 }
 
 export const MOCK_TEACHERS: TeacherRow[] = [
