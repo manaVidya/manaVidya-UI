@@ -2,6 +2,9 @@
   "name": "manavidya-ui",
   "private": true,
   "version": "0.0.1",
+  "engines": {
+    "node": ">=22.22.1"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

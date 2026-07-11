@@ -19,13 +19,16 @@ import {
   TextField as MuiTextField,
   Typography,
 } from '@mui/material';
-import { Plus, X } from 'lucide-react';
-import type { StudentRow } from '../../lib/mockData';
+import { Plus, Save, X } from 'lucide-react';
+import type { CreateStudentPayload, StudentDetail } from '../../lib/studentsApi';
 
 interface CreateStudentDialogProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (student: StudentRow) => void;
+  /** Receives the API-shaped payload; throw/reject to keep the dialog open on failure. */
+  onSubmit: (payload: CreateStudentPayload) => Promise<void>;
+  /** When set, the dialog opens prefilled in edit mode. */
+  initial?: StudentDetail | null;
 }
 
 const GENDERS = ['Male', 'Female', 'Other'];
@@ -53,68 +56,86 @@ const HOUSES = ['Red', 'Blue', 'Green', 'Yellow'];
 const STUDENT_STATUSES = ['Active', 'Transferred', 'Alumni', 'Suspended'];
 const ACADEMIC_YEARS = ['2024-25', '2025-26', '2026-27'];
 
-function getInitialForm() {
+/** UI labels ('Male') ↔ API enums ('MALE'). */
+const GENDER_TO_API: Record<string, 'MALE' | 'FEMALE' | 'OTHER'> = {
+  Male: 'MALE',
+  Female: 'FEMALE',
+  Other: 'OTHER',
+};
+const GENDER_FROM_API: Record<string, string> = {
+  MALE: 'Male',
+  FEMALE: 'Female',
+  OTHER: 'Other',
+};
+
+const toDateInput = (value: string | null | undefined) => (value ?? '').slice(0, 10);
+
+function getInitialForm(initial?: StudentDetail | null) {
+  const father = initial?.guardians.find((g) => g.relation === 'FATHER');
+  const mother = initial?.guardians.find((g) => g.relation === 'MOTHER');
+  const other = initial?.guardians.find((g) => g.relation === 'GUARDIAN');
+  const primary = initial?.guardians.find((g) => g.isPrimary) ?? initial?.guardians[0];
+
   return {
     // 1. Student Information
-    studentId: `STU${String(Date.now()).slice(-6)}`,
-    password: Math.random().toString(36).slice(2, 10),
-    name: '',
-    gender: '',
-    dob: '',
-    admissionNumber: '',
-    admissionDate: '',
-    bloodGroup: '',
+    name: initial?.name ?? '',
+    studentMobile: initial?.user?.mobileNumber ?? '',
+    gender: initial?.gender ? (GENDER_FROM_API[initial.gender] ?? '') : '',
+    dob: toDateInput(initial?.dob),
+    admissionNumber: initial?.admissionNo ?? '',
+    admissionDate: toDateInput(initial?.admissionDate),
+    bloodGroup: initial?.bloodGroup ?? '',
     profilePhoto: '',
-    rollNo: '',
-    className: '',
-    section: '',
+    rollNo: initial?.rollNo ?? '',
+    className: initial?.class.name ?? '',
+    section: initial?.class.section ?? '',
 
     // 2. Parent Information
-    fatherName: '',
-    motherName: '',
-    fatherPhone: '',
-    motherPhone: '',
-    parentEmail: '',
-    guardianName: '',
-    guardianRelationship: '',
-    emergencyContact: '',
-    guardianPhone: '',
+    fatherName: father?.guardianUser.name ?? '',
+    motherName: mother?.guardianUser.name ?? '',
+    fatherPhone: father?.guardianUser.mobileNumber ?? '',
+    motherPhone: mother?.guardianUser.mobileNumber ?? '',
+    parentEmail: primary?.guardianUser.email ?? '',
+    guardianName: other?.guardianUser.name ?? '',
+    guardianRelationship: other ? 'Guardian' : '',
+    emergencyContact: initial?.medicalInfo?.emergencyContactPhone ?? '',
+    guardianPhone: primary?.guardianUser.mobileNumber ?? '',
 
     // 3. Address
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    country: 'India',
-    pincode: '',
+    addressLine1: initial?.address?.line1 ?? '',
+    addressLine2: initial?.address?.line2 ?? '',
+    city: initial?.address?.city ?? '',
+    state: initial?.address?.state ?? '',
+    country: initial?.address?.country ?? 'India',
+    pincode: initial?.address?.pincode ?? '',
 
     // 4. Academic Information
-    academicYear: '',
-    previousSchool: '',
-    mediumOfInstruction: '',
-    house: '',
+    academicYear: initial?.academicYear ?? '',
+    previousSchool: initial?.previousSchool ?? '',
+    mediumOfInstruction: initial?.mediumOfInstruction ?? '',
+    house: initial?.house ?? '',
     studentStatus: 'Active',
 
     // 5. Medical Information
     age: '',
-    heightCm: '',
-    weightKg: '',
-    allergies: '',
-    medicalConditions: '',
-    disability: false,
-    doctorName: '',
-    emergencyMedicalNotes: '',
+    heightCm: initial?.medicalInfo?.heightCm ? String(initial.medicalInfo.heightCm) : '',
+    weightKg: initial?.medicalInfo?.weightKg ? String(initial.medicalInfo.weightKg) : '',
+    allergies: initial?.medicalInfo?.allergies ?? '',
+    medicalConditions: initial?.medicalInfo?.medicalConditions ?? '',
+    disability: initial?.medicalInfo?.disability ?? false,
+    doctorName: initial?.medicalInfo?.doctorName ?? '',
+    emergencyMedicalNotes: initial?.medicalInfo?.emergencyMedicalNotes ?? '',
 
     // 6. Identity Details
-    aadhaar: '',
-    birthCertificateNumber: '',
-    passportNumber: '',
+    aadhaar: initial?.identityDoc?.aadhaar ?? '',
+    birthCertificateNumber: initial?.identityDoc?.birthCertificateNumber ?? '',
+    passportNumber: initial?.identityDoc?.passportNumber ?? '',
 
     // 7. Transport
-    transportRequired: false,
-    route: '',
-    busNumber: '',
-    pickupPoint: '',
+    transportRequired: initial?.transport?.required ?? false,
+    route: initial?.transport?.route ?? '',
+    busNumber: initial?.transport?.busNumber ?? '',
+    pickupPoint: initial?.transport?.pickupPoint ?? '',
 
     // 8. Fee Information
     feeCategory: '',
@@ -124,7 +145,7 @@ function getInitialForm() {
 
     // 9. Login Information
     username: '',
-    email: '',
+    email: initial?.user?.email ?? '',
     accountStatus: 'Active',
 
     // 10. Documents
@@ -133,6 +154,112 @@ function getInitialForm() {
     transferCertificate: '',
     previousMarksMemo: '',
     medicalCertificate: '',
+  };
+}
+
+/** Last-10-digits sanitizer — tolerates "+91 90000 00000" style input. */
+const toMobile = (value: string) => value.replace(/\D/g, '').slice(-10);
+
+function buildPayload(form: FormState): CreateStudentPayload {
+  const guardians: CreateStudentPayload['guardians'] = [];
+  if (form.fatherName.trim()) {
+    guardians.push({
+      name: form.fatherName.trim(),
+      mobileNumber: toMobile(form.fatherPhone || form.guardianPhone),
+      email: form.parentEmail.trim() || undefined,
+      relation: 'FATHER',
+      isPrimary: true,
+    });
+  }
+  if (form.motherName.trim() && form.motherPhone.trim()) {
+    guardians.push({
+      name: form.motherName.trim(),
+      mobileNumber: toMobile(form.motherPhone),
+      relation: 'MOTHER',
+    });
+  }
+  if (form.guardianName.trim()) {
+    guardians.push({
+      name: form.guardianName.trim(),
+      mobileNumber: toMobile(form.guardianPhone),
+      relation: 'GUARDIAN',
+    });
+  }
+  // One login per mobile number — drop duplicates (e.g. guardian phone reused for father).
+  const seen = new Set<string>();
+  const uniqueGuardians = guardians.filter((g) => {
+    if (!g.mobileNumber || seen.has(g.mobileNumber)) return false;
+    seen.add(g.mobileNumber);
+    return true;
+  });
+
+  const hasAddress =
+    form.addressLine1 || form.addressLine2 || form.city || form.state || form.pincode;
+  const hasMedical =
+    form.heightCm ||
+    form.weightKg ||
+    form.allergies ||
+    form.medicalConditions ||
+    form.disability ||
+    form.doctorName ||
+    form.emergencyMedicalNotes ||
+    form.emergencyContact;
+  const hasIdentity = form.aadhaar || form.birthCertificateNumber || form.passportNumber;
+
+  return {
+    student: {
+      name: form.name.trim(),
+      mobileNumber: toMobile(form.studentMobile),
+      email: form.email.trim() || undefined,
+      gender: GENDER_TO_API[form.gender],
+      dob: form.dob,
+      className: form.className.trim(),
+      section: form.section.trim(),
+      academicYear: form.academicYear || undefined,
+      admissionNo: form.admissionNumber.trim(),
+      admissionDate: form.admissionDate || undefined,
+      rollNo: form.rollNo.trim(),
+      bloodGroup: form.bloodGroup || undefined,
+      house: form.house || undefined,
+      mediumOfInstruction: form.mediumOfInstruction || undefined,
+      previousSchool: form.previousSchool.trim() || undefined,
+    },
+    address: hasAddress
+      ? {
+          line1: form.addressLine1.trim() || undefined,
+          line2: form.addressLine2.trim() || undefined,
+          city: form.city.trim() || undefined,
+          state: form.state || undefined,
+          country: form.country || undefined,
+          pincode: form.pincode.trim() || undefined,
+        }
+      : undefined,
+    medical: hasMedical
+      ? {
+          heightCm: form.heightCm ? Number(form.heightCm) : undefined,
+          weightKg: form.weightKg ? Number(form.weightKg) : undefined,
+          allergies: form.allergies.trim() || undefined,
+          medicalConditions: form.medicalConditions.trim() || undefined,
+          disability: form.disability,
+          doctorName: form.doctorName.trim() || undefined,
+          emergencyMedicalNotes: form.emergencyMedicalNotes.trim() || undefined,
+          emergencyContactPhone: form.emergencyContact.trim() || undefined,
+        }
+      : undefined,
+    identity: hasIdentity
+      ? {
+          aadhaar: form.aadhaar.trim() || undefined,
+          birthCertificateNumber: form.birthCertificateNumber.trim() || undefined,
+          passportNumber: form.passportNumber.trim() || undefined,
+        }
+      : undefined,
+    transport: {
+      required: form.transportRequired,
+      route: form.route.trim() || undefined,
+      busNumber: form.busNumber.trim() || undefined,
+      pickupPoint: form.pickupPoint.trim() || undefined,
+    },
+    guardians: uniqueGuardians,
   };
 }
 
@@ -161,10 +288,17 @@ function StableInputLabel(props: React.ComponentProps<typeof MuiInputLabel>) {
   return <MuiInputLabel {...props} shrink />;
 }
 
-export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDialogProps) {
-  const [form, setForm] = useState<FormState>(getInitialForm);
+export function CreateStudentDialog({
+  open,
+  onClose,
+  onSubmit,
+  initial,
+}: CreateStudentDialogProps) {
+  const isEdit = Boolean(initial);
+  const [form, setForm] = useState<FormState>(() => getInitialForm(initial));
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -180,9 +314,12 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
 
   const isRequiredString = (value: string) => value.trim().length > 0;
 
+  // Mirrors what the backend actually requires: core student fields + ≥1 guardian.
+  // Father/mother/Aadhaar are optional (single-parent families, missing documents) —
+  // over-requiring them here made edit mode un-submittable for legitimate records.
   const requiredFields: (keyof FormState)[] = [
-    'studentId',
     'name',
+    'studentMobile',
     'gender',
     'dob',
     'admissionNumber',
@@ -191,108 +328,32 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
     'rollNo',
     'className',
     'section',
-    'fatherName',
-    'motherName',
-    'guardianPhone',
-    'aadhaar',
   ];
 
-  const canSubmit = requiredFields.every((field) => isRequiredString(form[field] as string));
+  const hasGuardian = buildPayload(form).guardians.length > 0;
+  const coreFieldsFilled = requiredFields.every((field) => isRequiredString(form[field] as string));
+  const canSubmit = coreFieldsFilled && hasGuardian;
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
+  // Success/failure feedback comes entirely from the global toast (the API's own
+  // message) — this handler only closes/resets on success and stays open on failure.
+  const handleSubmit = async () => {
+    if (!canSubmit || submitting) return;
 
-    const newStudent: StudentRow = {
-      id: `stu-${Date.now()}`,
-      name: form.name.trim(),
-      className: form.className.trim(),
-      section: form.section.trim(),
-      rollNo: form.rollNo.trim(),
-      attendancePct: 100,
-      guardianPhone: form.guardianPhone.trim(),
-
-      // 1. Student Information
-      studentId: form.studentId.trim(),
-      gender: form.gender,
-      dob: form.dob,
-      admissionNumber: form.admissionNumber.trim(),
-      admissionDate: form.admissionDate,
-      bloodGroup: form.bloodGroup,
-      profilePhoto: form.profilePhoto || undefined,
-
-      // 2. Parent Information
-      fatherName: form.fatherName.trim(),
-      motherName: form.motherName.trim(),
-      fatherPhone: form.fatherPhone.trim() || undefined,
-      motherPhone: form.motherPhone.trim() || undefined,
-      parentEmail: form.parentEmail.trim() || undefined,
-      guardianName: form.guardianName.trim() || undefined,
-      guardianRelationship: form.guardianRelationship.trim() || undefined,
-      emergencyContact: form.emergencyContact.trim() || undefined,
-
-      // 3. Address
-      addressLine1: form.addressLine1.trim() || undefined,
-      addressLine2: form.addressLine2.trim() || undefined,
-      city: form.city.trim() || undefined,
-      state: form.state || undefined,
-      country: form.country || undefined,
-      pincode: form.pincode.trim() || undefined,
-
-      // 4. Academic
-      academicYear: form.academicYear || undefined,
-      previousSchool: form.previousSchool.trim() || undefined,
-      mediumOfInstruction: form.mediumOfInstruction || undefined,
-      house: form.house || undefined,
-      studentStatus: form.studentStatus || undefined,
-
-      // 5. Medical
-      age: form.age ? Number(form.age) : undefined,
-      heightCm: form.heightCm ? Number(form.heightCm) : undefined,
-      weightKg: form.weightKg ? Number(form.weightKg) : undefined,
-      allergies: form.allergies.trim() || undefined,
-      medicalConditions: form.medicalConditions.trim() || undefined,
-      disability: form.disability,
-      doctorName: form.doctorName.trim() || undefined,
-      emergencyMedicalNotes: form.emergencyMedicalNotes.trim() || undefined,
-
-      // 6. Identity
-      aadhaar: form.aadhaar.trim(),
-      birthCertificateNumber: form.birthCertificateNumber.trim() || undefined,
-      passportNumber: form.passportNumber.trim() || undefined,
-
-      // 7. Transport
-      transportRequired: form.transportRequired,
-      route: form.route.trim() || undefined,
-      busNumber: form.busNumber.trim() || undefined,
-      pickupPoint: form.pickupPoint.trim() || undefined,
-
-      // 8. Fee
-      // feeCategory: form.feeCategory || undefined,
-      // scholarship: form.scholarship.trim() || undefined,
-      // feeConcession: form.feeConcession || undefined,
-      // paymentStatus: form.paymentStatus || undefined,
-
-      // 9. Login
-      // username: form.username.trim() || undefined,
-      // password: form.password || undefined,
-      email: form.email.trim() || undefined,
-      // accountStatus: form.accountStatus || undefined,
-
-      // 10. Documents
-      // aadhaarDoc: form.aadhaarDoc || undefined,
-      // birthCertificate: form.birthCertificate || undefined,
-      // transferCertificate: form.transferCertificate || undefined,
-      // previousMarksMemo: form.previousMarksMemo || undefined,
-      // medicalCertificate: form.medicalCertificate || undefined,
-    };
-
-    onCreate(newStudent);
-    setForm(getInitialForm());
-    setTouched({});
-    onClose();
+    setSubmitting(true);
+    try {
+      await onSubmit(buildPayload(form));
+      setForm(getInitialForm());
+      setTouched({});
+      onClose();
+    } catch {
+      // Toast already showed the API error; keep the dialog open for corrections.
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleClose = () => {
+    if (submitting) return;
     setForm(getInitialForm());
     setTouched({});
     onClose();
@@ -332,7 +393,7 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
         }}
       >
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          Create Student
+          {isEdit ? `Edit Student — ${initial?.displayId ?? ''}` : 'Create Student'}
         </Typography>
         <IconButton onClick={handleClose} sx={{ color: 'var(--text-secondary)' }}>
           <X size={20} />
@@ -440,13 +501,30 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
 
               <Grid size={{ xs: 12, md: 4 }}>
                 <StableTextField
-                  label="Student Email *"
+                  label="Student Mobile (login) *"
+                  fullWidth
+                  value={form.studentMobile}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    updateField('studentMobile', e.target.value.replace(/\D/g, '').slice(0, 10))
+                  }
+                  onBlur={handleBlur('studentMobile')}
+                  error={!!renderError('studentMobile', 'Required')}
+                  helperText={
+                    renderError('studentMobile', 'Student mobile number is required') ||
+                    'Used as the student login; first password is the DOB (DDMMYYYY).'
+                  }
+                  slotProps={{ htmlInput: { inputMode: 'numeric' } }}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <StableTextField
+                  label="Student Email"
+                  type="email"
                   fullWidth
                   value={form.email}
                   onChange={handleTextChange('email')}
-                  onBlur={handleBlur('email')}
-                  error={!!renderError('email', 'Required')}
-                  helperText={renderError('email', 'Student email is required')}
+                  placeholder="Optional"
                 />
               </Grid>
 
@@ -580,13 +658,11 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 4 }}>
                 <StableTextField
-                  label="Father's Name *"
+                  label="Father's Name"
                   fullWidth
                   value={form.fatherName}
                   onChange={handleTextChange('fatherName')}
-                  onBlur={handleBlur('fatherName')}
-                  error={!!renderError('fatherName', 'Required')}
-                  helperText={renderError('fatherName', "Father's name is required")}
+                  helperText="At least one guardian (name + phone) is required."
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -600,13 +676,11 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <StableTextField
-                  label="Mother's Name *"
+                  label="Mother's Name"
                   fullWidth
                   value={form.motherName}
                   onChange={handleTextChange('motherName')}
-                  onBlur={handleBlur('motherName')}
-                  error={!!renderError('motherName', 'Required')}
-                  helperText={renderError('motherName', "Mother's name is required")}
+                  placeholder="Optional"
                 />
               </Grid>
 
@@ -631,14 +705,12 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <StableTextField
-                  label="Guardian Phone *"
+                  label="Guardian Phone"
                   fullWidth
                   value={form.guardianPhone}
                   onChange={handleTextChange('guardianPhone')}
-                  onBlur={handleBlur('guardianPhone')}
-                  error={!!renderError('guardianPhone', 'Required')}
-                  helperText={renderError('guardianPhone', 'Guardian phone is required')}
                   placeholder="+91 90000 00000"
+                  helperText="Used if a guardian has no phone of their own."
                 />
               </Grid>
 
@@ -918,14 +990,11 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 4 }}>
                 <StableTextField
-                  label="Aadhaar Number *"
+                  label="Aadhaar Number"
                   fullWidth
                   value={form.aadhaar}
                   onChange={handleTextChange('aadhaar')}
-                  onBlur={handleBlur('aadhaar')}
-                  error={!!renderError('aadhaar', 'Required')}
-                  helperText={renderError('aadhaar', 'Aadhaar number is required')}
-                  placeholder="XXXX XXXX XXXX"
+                  placeholder="XXXX XXXX XXXX (optional)"
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
@@ -1000,16 +1069,29 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
-        <Button onClick={handleClose} variant="outlined" color="inherit">
+        {!canSubmit && (
+          <Typography variant="caption" color="text.secondary" sx={{ mr: 'auto' }}>
+            {coreFieldsFilled
+              ? 'Add at least one guardian (name + phone) to continue.'
+              : 'Fill all required (*) fields to continue.'}
+          </Typography>
+        )}
+        <Button onClick={handleClose} variant="outlined" color="inherit" disabled={submitting}>
           Cancel
         </Button>
         <Button
           variant="contained"
-          disabled={!canSubmit}
-          startIcon={<Plus size={18} />}
-          onClick={handleSubmit}
+          disabled={!canSubmit || submitting}
+          startIcon={isEdit ? <Save size={18} /> : <Plus size={18} />}
+          onClick={() => void handleSubmit()}
         >
-          Create Student
+          {submitting
+            ? isEdit
+              ? 'Saving…'
+              : 'Creating…'
+            : isEdit
+              ? 'Save Changes'
+              : 'Create Student'}
         </Button>
       </DialogActions>
     </Dialog>
