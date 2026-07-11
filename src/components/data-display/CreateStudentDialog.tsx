@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import {
   Box,
   Button,
@@ -19,7 +19,7 @@ import {
   TextField as MuiTextField,
   Typography,
 } from '@mui/material';
-import { Camera, FileText, Plus, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import type { StudentRow } from '../../lib/mockData';
 
 interface CreateStudentDialogProps {
@@ -51,10 +51,6 @@ const COUNTRIES = ['India', 'Other'];
 const MEDIUMS = ['English', 'Telugu', 'Hindi', 'Urdu', 'Tamil', 'Kannada'];
 const HOUSES = ['Red', 'Blue', 'Green', 'Yellow'];
 const STUDENT_STATUSES = ['Active', 'Transferred', 'Alumni', 'Suspended'];
-const FEE_CATEGORIES = ['General', 'SC/ST', 'OBC', 'EWS', 'Management'];
-const FEE_CONCESSIONS = ['None', '25%', '50%', '75%', '100%'];
-const PAYMENT_STATUSES = ['Paid', 'Partial', 'Pending'];
-const ACCOUNT_STATUSES = ['Active', 'Inactive', 'Suspended'];
 const ACADEMIC_YEARS = ['2024-25', '2025-26', '2026-27'];
 
 function getInitialForm() {
@@ -152,62 +148,13 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-function DocumentUpload({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (url: string) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onChange(URL.createObjectURL(file));
-    }
-  };
-
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1.5,
-        p: 1.5,
-        border: '1px dashed var(--border-default)',
-        borderRadius: 2,
-        cursor: 'pointer',
-      }}
-      onClick={() => inputRef.current?.click()}
-    >
-      <FileText size={20} style={{ color: 'var(--text-secondary)' }} />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13 }}>
-          {label}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" noWrap>
-          {value ? 'Document selected' : 'Click to upload (PDF/Image)'}
-        </Typography>
-      </Box>
-      <input ref={inputRef} type="file" accept="image/*,.pdf" hidden onChange={handleChange} />
-    </Box>
-  );
-}
-
 function StableTextField(props: React.ComponentProps<typeof MuiTextField>) {
   const { slotProps, ...rest } = props;
-  return (
-    <MuiTextField
-      {...rest}
-      slotProps={{
-        ...slotProps,
-        inputLabel: { shrink: true, ...slotProps?.inputLabel },
-      }}
-    />
-  );
+  const merged = {
+    ...slotProps,
+    inputLabel: { shrink: true, ...(slotProps?.inputLabel as object) },
+  };
+  return <MuiTextField {...rest} slotProps={merged} />;
 }
 
 function StableInputLabel(props: React.ComponentProps<typeof MuiInputLabel>) {
@@ -218,7 +165,6 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
   const [form, setForm] = useState<FormState>(getInitialForm);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState(0);
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -230,13 +176,6 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
 
   const handleBlur = (field: keyof FormState) => () => {
     setTouched((prev) => ({ ...prev, [field]: true }));
-  };
-
-  const handlePhotoUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      updateField('profilePhoto', URL.createObjectURL(file));
-    }
   };
 
   const isRequiredString = (value: string) => value.trim().length > 0;
@@ -328,23 +267,23 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
       pickupPoint: form.pickupPoint.trim() || undefined,
 
       // 8. Fee
-      feeCategory: form.feeCategory || undefined,
-      scholarship: form.scholarship.trim() || undefined,
-      feeConcession: form.feeConcession || undefined,
-      paymentStatus: form.paymentStatus || undefined,
+      // feeCategory: form.feeCategory || undefined,
+      // scholarship: form.scholarship.trim() || undefined,
+      // feeConcession: form.feeConcession || undefined,
+      // paymentStatus: form.paymentStatus || undefined,
 
       // 9. Login
-      username: form.username.trim() || undefined,
-      password: form.password || undefined,
+      // username: form.username.trim() || undefined,
+      // password: form.password || undefined,
       email: form.email.trim() || undefined,
-      accountStatus: form.accountStatus || undefined,
+      // accountStatus: form.accountStatus || undefined,
 
       // 10. Documents
-      aadhaarDoc: form.aadhaarDoc || undefined,
-      birthCertificate: form.birthCertificate || undefined,
-      transferCertificate: form.transferCertificate || undefined,
-      previousMarksMemo: form.previousMarksMemo || undefined,
-      medicalCertificate: form.medicalCertificate || undefined,
+      // aadhaarDoc: form.aadhaarDoc || undefined,
+      // birthCertificate: form.birthCertificate || undefined,
+      // transferCertificate: form.transferCertificate || undefined,
+      // previousMarksMemo: form.previousMarksMemo || undefined,
+      // medicalCertificate: form.medicalCertificate || undefined,
     };
 
     onCreate(newStudent);
@@ -415,7 +354,6 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
           <Tab label="Student & Parent" />
           <Tab label="Address & Academic" />
           <Tab label="Medical & Identity" />
-          <Tab label="Fee, Login & Docs" />
         </Tabs>
 
         {activeTab === 0 && (
@@ -423,7 +361,60 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
             {/* 1. Student Information */}
             <SectionHeader title="1. Student Information" />
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 4 }}>
+              {/* <Grid size={{ xs: 12, md: 4 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    p: 1.5,
+                    border: '1px dashed var(--border-default)',
+                    borderRadius: 2,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '50%',
+                      background: form.profilePhoto
+                        ? `url(${form.profilePhoto}) center/cover`
+                        : 'var(--bg-surface-3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--text-secondary)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {!form.profilePhoto && <Camera size={22} />}
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Profile Photo
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Optional. JPG, PNG.
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      sx={{ mt: 0.5, textTransform: 'none' }}
+                      onClick={() => photoInputRef.current?.click()}
+                    >
+                      Upload
+                    </Button>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={handlePhotoUpload}
+                    />
+                  </Box>
+                </Box>
+              </Grid> */}
+              {/* <Grid size={{ xs: 12, md: 4 }}>
                 <StableTextField
                   label="Student ID *"
                   fullWidth
@@ -434,7 +425,31 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
                   helperText={renderError('studentId', 'Student ID is required')}
                   slotProps={{ htmlInput: { readOnly: true } }}
                 />
+              </Grid> */}
+              <Grid size={{ xs: 12, md: 4 }}>
+                <StableTextField
+                  label="Student Name *"
+                  fullWidth
+                  value={form.name}
+                  onChange={handleTextChange('name')}
+                  onBlur={handleBlur('name')}
+                  error={!!renderError('name', 'Required')}
+                  helperText={renderError('name', 'Student name is required')}
+                />
               </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <StableTextField
+                  label="Student Email *"
+                  fullWidth
+                  value={form.email}
+                  onChange={handleTextChange('email')}
+                  onBlur={handleBlur('email')}
+                  error={!!renderError('email', 'Required')}
+                  helperText={renderError('email', 'Student email is required')}
+                />
+              </Grid>
+
               <Grid size={{ xs: 12, md: 4 }}>
                 <StableTextField
                   label="Admission Number *"
@@ -460,17 +475,6 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
                 />
               </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
-                <StableTextField
-                  label="Student Name *"
-                  fullWidth
-                  value={form.name}
-                  onChange={handleTextChange('name')}
-                  onBlur={handleBlur('name')}
-                  error={!!renderError('name', 'Required')}
-                  helperText={renderError('name', 'Student name is required')}
-                />
-              </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <FormControl fullWidth error={!!renderError('gender', 'Required')}>
                   <StableInputLabel>Gender *</StableInputLabel>
@@ -532,59 +536,6 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
                   error={!!renderError('rollNo', 'Required')}
                   helperText={renderError('rollNo', 'Roll number is required')}
                 />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    p: 1.5,
-                    border: '1px dashed var(--border-default)',
-                    borderRadius: 2,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: '50%',
-                      background: form.profilePhoto
-                        ? `url(${form.profilePhoto}) center/cover`
-                        : 'var(--bg-surface-3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--text-secondary)',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {!form.profilePhoto && <Camera size={22} />}
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      Profile Photo
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Optional. JPG, PNG.
-                    </Typography>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      sx={{ mt: 0.5, textTransform: 'none' }}
-                      onClick={() => photoInputRef.current?.click()}
-                    >
-                      Upload
-                    </Button>
-                    <input
-                      ref={photoInputRef}
-                      type="file"
-                      accept="image/*"
-                      hidden
-                      onChange={handlePhotoUpload}
-                    />
-                  </Box>
-                </Box>
               </Grid>
 
               <Grid size={{ xs: 12, md: 4 }}>
@@ -1043,163 +994,6 @@ export function CreateStudentDialog({ open, onClose, onCreate }: CreateStudentDi
                   </Grid>
                 </>
               )}
-            </Grid>
-          </Box>
-        )}
-
-        {activeTab === 3 && (
-          <Box>
-            {/* 8. Fee Information */}
-            <SectionHeader title="8. Fee Information" />
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <FormControl fullWidth>
-                  <StableInputLabel>Fee Category</StableInputLabel>
-                  <Select
-                    value={form.feeCategory}
-                    onChange={(e) => updateField('feeCategory', e.target.value)}
-                    label="Fee Category"
-                  >
-                    <MenuItem value="">None</MenuItem>
-                    {FEE_CATEGORIES.map((c) => (
-                      <MenuItem key={c} value={c}>
-                        {c}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <StableTextField
-                  label="Scholarship"
-                  fullWidth
-                  value={form.scholarship}
-                  onChange={handleTextChange('scholarship')}
-                  placeholder="Optional"
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <FormControl fullWidth>
-                  <StableInputLabel>Fee Concession</StableInputLabel>
-                  <Select
-                    value={form.feeConcession}
-                    onChange={(e) => updateField('feeConcession', e.target.value)}
-                    label="Fee Concession"
-                  >
-                    {FEE_CONCESSIONS.map((c) => (
-                      <MenuItem key={c} value={c}>
-                        {c}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <FormControl fullWidth>
-                  <StableInputLabel>Payment Status</StableInputLabel>
-                  <Select
-                    value={form.paymentStatus}
-                    onChange={(e) => updateField('paymentStatus', e.target.value)}
-                    label="Payment Status"
-                  >
-                    <MenuItem value="">None</MenuItem>
-                    {PAYMENT_STATUSES.map((s) => (
-                      <MenuItem key={s} value={s}>
-                        {s}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-
-            {/* 9. Login Information */}
-            <SectionHeader title="9. Login Information" />
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <StableTextField
-                  label="Username"
-                  fullWidth
-                  value={form.username}
-                  onChange={handleTextChange('username')}
-                  placeholder="Optional"
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <StableTextField
-                  label="Password"
-                  fullWidth
-                  value={form.password}
-                  slotProps={{ htmlInput: { readOnly: true } }}
-                  helperText="Auto-generated"
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <StableTextField
-                  label="Email"
-                  type="email"
-                  fullWidth
-                  value={form.email}
-                  onChange={handleTextChange('email')}
-                  placeholder="Optional"
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 3 }}>
-                <FormControl fullWidth>
-                  <StableInputLabel>Account Status</StableInputLabel>
-                  <Select
-                    value={form.accountStatus}
-                    onChange={(e) => updateField('accountStatus', e.target.value)}
-                    label="Account Status"
-                  >
-                    {ACCOUNT_STATUSES.map((s) => (
-                      <MenuItem key={s} value={s}>
-                        {s}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-
-            {/* 10. Documents */}
-            <SectionHeader title="10. Documents" />
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <DocumentUpload
-                  label="Student Aadhaar"
-                  value={form.aadhaarDoc}
-                  onChange={(url) => updateField('aadhaarDoc', url)}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <DocumentUpload
-                  label="Birth Certificate"
-                  value={form.birthCertificate}
-                  onChange={(url) => updateField('birthCertificate', url)}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <DocumentUpload
-                  label="Transfer Certificate"
-                  value={form.transferCertificate}
-                  onChange={(url) => updateField('transferCertificate', url)}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <DocumentUpload
-                  label="Previous Marks Memo"
-                  value={form.previousMarksMemo}
-                  onChange={(url) => updateField('previousMarksMemo', url)}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <DocumentUpload
-                  label="Medical Certificate"
-                  value={form.medicalCertificate}
-                  onChange={(url) => updateField('medicalCertificate', url)}
-                />
-              </Grid>
             </Grid>
           </Box>
         )}
