@@ -48,6 +48,24 @@ export async function resetPassword(
   return data;
 }
 
+/**
+ * First-login (and general "know my current password") change path. Deliberately not
+ * `silent` — the global toast should show the API's own message (success and error),
+ * not a hardcoded string here.
+ */
+export async function changePassword(
+  mobileNumber: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>('/auth/change-password', {
+    mobileNumber,
+    currentPassword,
+    newPassword,
+  });
+  return data;
+}
+
 /** Revokes the refresh token server-side and clears its cookie; never throws. */
 export async function logout(): Promise<void> {
   try {
