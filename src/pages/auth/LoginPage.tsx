@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, Circle } from 'lucide-react';
 import { slideUp, staggerContainer } from '../../lib/motion';
 import { useAuth } from '../../hooks/useAuth';
 import * as authApi from '../../lib/authApi';
@@ -18,14 +19,54 @@ import { getErrorMessage } from '../../lib/getErrorMessage';
 
 const MotionStack = motion(Stack);
 
-type Step = 'login' | 'reset-request' | 'reset-confirm';
+type Step = 'login' | 'reset-request' | 'reset-confirm' | 'first-login';
 
 const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 // Mirrors PASSWORD_POLICY_REGEX in the backend's auth.constants.ts — kept in sync so the
 // error surfaces here instead of round-tripping to the server for an avoidable 400.
-const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const PASSWORD_HELPER_TEXT =
   'At least 8 characters, with an uppercase letter, a lowercase letter, a number, and a special character.';
+
+interface PasswordCheck {
+  label: string;
+  met: boolean;
+}
+
+function getPasswordChecks(value: string): PasswordCheck[] {
+  return [
+    { label: 'At least 8 characters', met: value.length >= 8 },
+    { label: 'One uppercase letter', met: /[A-Z]/.test(value) },
+    { label: 'One lowercase letter', met: /[a-z]/.test(value) },
+    { label: 'One number', met: /\d/.test(value) },
+    { label: 'One special character', met: /[^A-Za-z0-9]/.test(value) },
+  ];
+}
+
+function PasswordChecklist({ value }: { value: string }) {
+  const checks = getPasswordChecks(value);
+  return (
+    <Stack spacing={0.5} sx={{ pl: 0.5 }}>
+      {checks.map((check) => (
+        <Stack key={check.label} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          {check.met ? (
+            <CheckCircle2 size={15} color="var(--status-success-500)" style={{ flexShrink: 0 }} />
+          ) : (
+            <Circle size={15} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+          )}
+          <Typography
+            variant="caption"
+            sx={{
+              color: check.met ? 'var(--status-success-500)' : 'text.secondary',
+              textDecoration: check.met ? 'line-through' : 'none',
+            }}
+          >
+            {check.label}
+          </Typography>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -35,6 +76,7 @@ export default function LoginPage() {
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -61,11 +103,13 @@ export default function LoginPage() {
 
       if (user.mustResetPassword) {
         // Don't hand out a portal session on a first-login DOB password —
-        // force a verified reset before the account is usable.
+        // force a verified reset (current password re-entered, not an OTP)
+        // before the account is usable.
         logout();
-        setNotice('First login detected. Set a new password to continue.');
-        await authApi.forgotPassword(mobileNumber);
-        setStep('reset-confirm');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setStep('first-login');
         return;
       }
 
@@ -107,7 +151,7 @@ export default function LoginPage() {
     e.preventDefault();
     resetMessages();
 
-    if (!PASSWORD_PATTERN.test(newPassword)) {
+    if (!getPasswordChecks(newPassword).every((check) => check.met)) {
       setError(`New password does not meet requirements. ${PASSWORD_HELPER_TEXT}`);
       return;
     }
@@ -127,6 +171,33 @@ export default function LoginPage() {
       setStep('login');
     } catch (err) {
       setError(getErrorMessage(err, 'Invalid or expired OTP.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // First-login forced reset: verifies the current (default) password directly, no OTP.
+  // Success/failure is surfaced entirely by the global toast off the API response — this
+  // handler never sets a hardcoded inline message for the API result.
+  const firstLoginChecks = getPasswordChecks(newPassword);
+  const firstLoginPasswordValid = firstLoginChecks.every((check) => check.met);
+  const firstLoginPasswordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
+  const canSubmitFirstLogin =
+    currentPassword.length > 0 && firstLoginPasswordValid && firstLoginPasswordsMatch;
+
+  async function handleFirstLoginSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!canSubmitFirstLogin) return;
+
+    setSubmitting(true);
+    try {
+      await authApi.changePassword(mobileNumber, currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setStep('login');
+    } catch {
+      // The global toast (sourced from the API's own error message) already covers this.
     } finally {
       setSubmitting(false);
     }
@@ -157,6 +228,8 @@ export default function LoginPage() {
             {step === 'login' && 'Log in with your registered mobile number.'}
             {step === 'reset-request' && "Enter your mobile number and we'll send a reset code."}
             {step === 'reset-confirm' && 'Enter the code we sent and choose a new password.'}
+            {step === 'first-login' &&
+              'First login detected. Enter your current password and set a new one to continue.'}
           </Typography>
         </motion.div>
 
@@ -311,6 +384,60 @@ export default function LoginPage() {
                 >
                   Resend code
                 </MuiLink>
+              </Stack>
+            )}
+
+            {step === 'first-login' && (
+              <Stack
+                component="form"
+                spacing={2.5}
+                onSubmit={(e) => void handleFirstLoginSubmit(e)}
+              >
+                <TextField label="Mobile number" value={mobileNumber} fullWidth disabled />
+                <TextField
+                  label="Current (default) password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  autoComplete="current-password"
+                  fullWidth
+                  required
+                  autoFocus
+                />
+                <TextField
+                  label="New password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
+                  fullWidth
+                  required
+                />
+                <PasswordChecklist value={newPassword} />
+                <TextField
+                  label="Confirm new password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                  fullWidth
+                  required
+                  error={confirmPassword.length > 0 && !firstLoginPasswordsMatch}
+                  helperText={
+                    confirmPassword.length > 0 && !firstLoginPasswordsMatch
+                      ? 'Passwords do not match.'
+                      : ' '
+                  }
+                />
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={submitting || !canSubmitFirstLogin}
+                  fullWidth
+                >
+                  {submitting ? 'Updating…' : 'Set new password'}
+                </Button>
               </Stack>
             )}
           </Card>
