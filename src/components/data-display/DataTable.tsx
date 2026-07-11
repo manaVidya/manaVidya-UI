@@ -42,18 +42,20 @@ export function DataTable<T extends { id: string }>({
         <TableContainer sx={{ maxWidth: '100%', overflowX: 'auto' }}>
           <Table size="small">
             <TableHead>
-              <TableRow>
+              <TableRow sx={{ background: 'var(--bg-surface-2)' }}>
                 {columns.map((col) => (
                   <TableCell
                     key={col.key}
                     align={col.align ?? 'left'}
                     sx={{
-                      color: 'var(--text-tertiary)',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      letterSpacing: '0.06em',
+                      color: 'var(--text-secondary)',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
                       textTransform: 'uppercase',
-                      borderColor: 'var(--border-subtle)',
+                      whiteSpace: 'nowrap',
+                      py: 1.5,
+                      borderBottom: '2px solid var(--border-default)',
                     }}
                   >
                     {col.label}

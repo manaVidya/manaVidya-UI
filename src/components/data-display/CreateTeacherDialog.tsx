@@ -19,13 +19,16 @@ import {
   TextField as MuiTextField,
   Typography,
 } from '@mui/material';
-import { Camera, Plus, X } from 'lucide-react';
-import type { TeacherProfile } from '../../lib/mockData';
+import { Camera, Plus, Save, X } from 'lucide-react';
+import type { CreateTeacherPayload, TeacherDetail } from '../../lib/teachersApi';
 
 interface CreateTeacherDialogProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (profile: TeacherProfile) => void;
+  /** Receives the API-shaped payload; throw/reject to keep the dialog open on failure. */
+  onSubmit: (payload: CreateTeacherPayload) => Promise<void>;
+  /** When set, the dialog opens prefilled in edit mode. */
+  initial?: TeacherDetail | null;
 }
 
 const GENDERS = ['Male', 'Female', 'Other'];
@@ -78,44 +81,104 @@ const SUBJECT_OPTIONS = [
   'Music',
 ];
 
-function getInitialForm() {
+/** UI labels ('Male') ↔ API enums ('MALE'). */
+const GENDER_TO_API: Record<string, 'MALE' | 'FEMALE' | 'OTHER'> = {
+  Male: 'MALE',
+  Female: 'FEMALE',
+  Other: 'OTHER',
+};
+const GENDER_FROM_API: Record<string, string> = {
+  MALE: 'Male',
+  FEMALE: 'Female',
+  OTHER: 'Other',
+};
+
+const toDateInput = (value: string | null | undefined) => (value ?? '').slice(0, 10);
+
+function getInitialForm(initial?: TeacherDetail | null) {
+  const [firstName = '', ...restName] = (initial?.user.name ?? '').split(' ');
+
   return {
-    employeeId: `EMP${String(Date.now()).slice(-6)}`,
-    firstName: '',
-    lastName: '',
-    gender: '',
-    dob: '',
-    bloodGroup: '',
-    aadhaar: '',
+    employeeId: initial?.employeeCode ?? `EMP${String(Date.now()).slice(-6)}`,
+    firstName,
+    lastName: restName.join(' '),
+    gender: initial?.gender ? (GENDER_FROM_API[initial.gender] ?? '') : '',
+    dob: toDateInput(initial?.dob),
+    bloodGroup: initial?.bloodGroup ?? '',
+    aadhaar: initial?.aadhaar ?? '',
     profilePhoto: '',
-    mobile: '',
-    alternateMobile: '',
-    email: '',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    country: 'India',
-    pincode: '',
-    department: '',
-    designation: '',
-    subjects: [] as string[],
-    employeeType: '',
-    joiningDate: '',
-    experience: '',
-    qualification: '',
-    previousSchool: '',
-    salary: '',
+    mobile: initial?.user.mobileNumber ?? '',
+    alternateMobile: initial?.alternateMobile ?? '',
+    email: initial?.user.email ?? '',
+    addressLine1: initial?.address?.line1 ?? '',
+    addressLine2: initial?.address?.line2 ?? '',
+    city: initial?.address?.city ?? '',
+    state: initial?.address?.state ?? '',
+    country: initial?.address?.country ?? 'India',
+    pincode: initial?.address?.pincode ?? '',
+    department: initial?.department ?? '',
+    designation: initial?.designation ?? '',
+    subjects: initial?.subjects ?? [],
+    employeeType: initial?.employeeType ?? '',
+    joiningDate: toDateInput(initial?.joiningDate),
+    experience: initial?.experienceYears != null ? String(initial.experienceYears) : '',
+    qualification: initial?.qualification ?? '',
+    previousSchool: initial?.previousSchool ?? '',
+    salary: initial?.salary ?? '',
     employmentStatus: 'Active',
     classes: [] as string[],
     sections: [] as string[],
     classTeacher: false,
-    subjectsAssigned: [] as string[],
-    academicYear: '',
+    subjectsAssigned: initial?.subjects ?? [],
+    academicYear: initial?.academicYear ?? '',
   };
 }
 
 type FormState = ReturnType<typeof getInitialForm>;
+
+/** Last-10-digits sanitizer — tolerates "+91 90000 00000" style input. */
+const toMobile = (value: string) => value.replace(/\D/g, '').slice(-10);
+
+// classes/sections/classTeacher/employmentStatus stay UI-only for now — class
+// assignment is a separate module (Class.classTeacherId) and isn't sent on create.
+function buildPayload(form: FormState): CreateTeacherPayload {
+  const hasAddress =
+    form.addressLine1 || form.addressLine2 || form.city || form.state || form.pincode;
+
+  return {
+    teacher: {
+      name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+      mobileNumber: toMobile(form.mobile),
+      alternateMobile: form.alternateMobile.trim() || undefined,
+      email: form.email.trim() || undefined,
+      employeeCode: form.employeeId.trim(),
+      gender: GENDER_TO_API[form.gender],
+      dob: form.dob || undefined,
+      bloodGroup: form.bloodGroup || undefined,
+      aadhaar: form.aadhaar.trim() || undefined,
+      department: form.department || undefined,
+      designation: form.designation || undefined,
+      subjects: form.subjects,
+      employeeType: form.employeeType || undefined,
+      joiningDate: form.joiningDate || undefined,
+      experienceYears: form.experience ? Number(form.experience) : undefined,
+      qualification: form.qualification.trim() || undefined,
+      previousSchool: form.previousSchool.trim() || undefined,
+      salary: form.salary ? Number(form.salary) : undefined,
+      academicYear: form.academicYear || undefined,
+    },
+    address: hasAddress
+      ? {
+          line1: form.addressLine1.trim() || undefined,
+          line2: form.addressLine2.trim() || undefined,
+          city: form.city.trim() || undefined,
+          state: form.state || undefined,
+          country: form.country || undefined,
+          pincode: form.pincode.trim() || undefined,
+        }
+      : undefined,
+  };
+}
 
 function SectionHeader({ title }: { title: string }) {
   return (
@@ -144,9 +207,16 @@ function StableInputLabel(props: React.ComponentProps<typeof MuiInputLabel>) {
   return <MuiInputLabel {...props} shrink />;
 }
 
-export function CreateTeacherDialog({ open, onClose, onCreate }: CreateTeacherDialogProps) {
-  const [form, setForm] = useState<FormState>(getInitialForm);
+export function CreateTeacherDialog({
+  open,
+  onClose,
+  onSubmit,
+  initial,
+}: CreateTeacherDialogProps) {
+  const isEdit = Boolean(initial);
+  const [form, setForm] = useState<FormState>(() => getInitialForm(initial));
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
@@ -194,52 +264,26 @@ export function CreateTeacherDialog({ open, onClose, onCreate }: CreateTeacherDi
 
   const canSubmit = requiredFields.every(({ key, validate }) => validate(form[key]));
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
+  // Success/failure feedback comes entirely from the global toast (the API's own
+  // message) — this handler only closes/resets on success and stays open on failure.
+  const handleSubmit = async () => {
+    if (!canSubmit || submitting) return;
 
-    const profile: TeacherProfile = {
-      id: `tch-${Date.now()}`,
-      employeeId: form.employeeId.trim(),
-      firstName: form.firstName.trim(),
-      lastName: form.lastName.trim(),
-      gender: form.gender,
-      dob: form.dob,
-      bloodGroup: form.bloodGroup || undefined,
-      aadhaar: form.aadhaar.trim() || undefined,
-      profilePhoto: form.profilePhoto || undefined,
-      mobile: form.mobile.trim(),
-      alternateMobile: form.alternateMobile.trim() || undefined,
-      email: form.email.trim() || undefined,
-      addressLine1: form.addressLine1.trim() || undefined,
-      addressLine2: form.addressLine2.trim() || undefined,
-      city: form.city.trim() || undefined,
-      state: form.state || undefined,
-      country: form.country || undefined,
-      pincode: form.pincode.trim() || undefined,
-      department: form.department,
-      designation: form.designation,
-      subjects: form.subjects,
-      employeeType: form.employeeType,
-      joiningDate: form.joiningDate || undefined,
-      experience: form.experience ? Number(form.experience) : undefined,
-      qualification: form.qualification.trim() || undefined,
-      previousSchool: form.previousSchool.trim() || undefined,
-      salary: form.salary ? Number(form.salary) : undefined,
-      employmentStatus: form.employmentStatus,
-      classes: form.classes,
-      sections: form.sections,
-      classTeacher: form.classTeacher,
-      subjectsAssigned: form.subjectsAssigned,
-      academicYear: form.academicYear,
-    };
-
-    onCreate(profile);
-    setForm(getInitialForm());
-    setTouched({});
-    onClose();
+    setSubmitting(true);
+    try {
+      await onSubmit(buildPayload(form));
+      setForm(getInitialForm());
+      setTouched({});
+      onClose();
+    } catch {
+      // Toast already showed the API error; keep the dialog open for corrections.
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleClose = () => {
+    if (submitting) return;
     setForm(getInitialForm());
     setTouched({});
     onClose();
@@ -280,7 +324,7 @@ export function CreateTeacherDialog({ open, onClose, onCreate }: CreateTeacherDi
         }}
       >
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          Create Teacher
+          {isEdit ? `Edit Teacher — ${initial?.displayId ?? ''}` : 'Create Teacher'}
         </Typography>
         <IconButton onClick={handleClose} sx={{ color: 'var(--text-secondary)' }}>
           <X size={20} />
@@ -813,16 +857,22 @@ export function CreateTeacherDialog({ open, onClose, onCreate }: CreateTeacherDi
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
-        <Button onClick={handleClose} variant="outlined" color="inherit">
+        <Button onClick={handleClose} variant="outlined" color="inherit" disabled={submitting}>
           Cancel
         </Button>
         <Button
           variant="contained"
-          disabled={!canSubmit}
-          startIcon={<Plus size={18} />}
-          onClick={handleSubmit}
+          disabled={!canSubmit || submitting}
+          startIcon={isEdit ? <Save size={18} /> : <Plus size={18} />}
+          onClick={() => void handleSubmit()}
         >
-          Create Teacher
+          {submitting
+            ? isEdit
+              ? 'Saving…'
+              : 'Creating…'
+            : isEdit
+              ? 'Save Changes'
+              : 'Create Teacher'}
         </Button>
       </DialogActions>
     </Dialog>
