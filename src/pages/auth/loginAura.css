@@ -1,0 +1,71 @@
+/* pages/auth/loginAura.css
+ * Mouse-reactive spotlight for the login page — a faint dot grid whose
+ * visibility is masked by a radial gradient centred on the cursor, plus a
+ * soft brand-coloured glow underneath it. Both track --aura-x/--aura-y,
+ * written directly to the DOM by LoginAura.tsx (no React re-renders).
+ *
+ * Pure CSS custom-property + mask-image, deliberately not a Houdini
+ * PaintWorklet: Houdini Paint has no Firefox support and is inconsistent on
+ * older Android WebViews, which is exactly the audience for this app.
+ */
+
+.login-aura {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.login-aura__glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  background: radial-gradient(
+    600px circle at var(--aura-x, 50%) var(--aura-y, 32%),
+    var(--portal-500) 0%,
+    transparent 70%
+  );
+}
+
+.login-aura__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  background-image:
+    linear-gradient(var(--border-default) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-default) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(
+    360px circle at var(--aura-x, 50%) var(--aura-y, 32%),
+    black 0%,
+    transparent 75%
+  );
+  mask-image: radial-gradient(
+    360px circle at var(--aura-x, 50%) var(--aura-y, 32%),
+    black 0%,
+    transparent 75%
+  );
+}
+
+/* No fine pointer (touch, or a mouse that never moved yet) — keep a faint
+   static grid instead of hiding it entirely behind an off-screen mask. */
+.login-aura--static .login-aura__grid {
+  -webkit-mask-image: none;
+  mask-image: none;
+  opacity: 0.16;
+}
+.login-aura--static .login-aura__glow {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-aura__grid {
+    -webkit-mask-image: none;
+    mask-image: none;
+    opacity: 0.16;
+  }
+  .login-aura__glow {
+    display: none;
+  }
+}

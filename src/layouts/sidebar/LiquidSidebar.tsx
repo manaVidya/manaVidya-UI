@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import { ChevronLeft, Moon, Sun } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useLayout } from '../../hooks/useLayout';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
@@ -12,7 +12,6 @@ import { ChildSwitcher } from '../../components/foundation/ChildSwitcher';
 import { SidebarSearch } from './SidebarSearch';
 import { SidebarNavItem } from './SidebarNavItem';
 import { SidebarNavAccordion } from './SidebarNavAccordion';
-import { SidebarUserFooter } from './SidebarUserFooter';
 
 const SIDEBAR_EXPANDED_WIDTH = 280;
 const SIDEBAR_COLLAPSED_WIDTH = 72;
@@ -23,14 +22,14 @@ const sidebarVariants = {
 };
 
 /**
- * The one shell for every portal (Admin, Teacher, Parent, Student) — per
- * review, the floating dock was dropped in favour of keeping this constant
- * everywhere; only the colour identity (--portal-*) changes between them.
+ * The one shell for every portal (Admin, Teacher, Parent, Student) — only the
+ * colour identity (--portal-*) changes between them. Profile/account/theme
+ * controls live in the top-right UserDock, not here — see AppShellSidebar.
  */
 export function LiquidSidebar() {
   const { sidebarExpanded, toggleSidebar, isMobile, mobileDrawerOpen, closeMobileDrawer } =
     useLayout();
-  const { user, toggleThemeMode, themeMode } = useAuth();
+  const { user } = useAuth();
   const { can } = usePermissions();
   const badges = useNavBadges();
   const { pathname } = useLocation();
@@ -120,9 +119,21 @@ export function LiquidSidebar() {
             borderRadius: 10,
             background: 'linear-gradient(135deg, var(--portal-400), var(--portal-600))',
             flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 5,
           }}
           aria-hidden
-        />
+        >
+          <img
+            src="/favicon.svg"
+            alt=""
+            width={22}
+            height={22}
+            style={{ display: 'block', filter: 'brightness(0) invert(1)' }}
+          />
+        </div>
         {expanded && (
           <div style={{ overflow: 'hidden' }}>
             <p
@@ -181,44 +192,17 @@ export function LiquidSidebar() {
         })}
       </nav>
 
-      <SidebarUserFooter expanded={expanded} />
-
-      <div
-        style={{
-          padding: '0 12px 12px',
-          display: 'flex',
-          gap: 8,
-        }}
-      >
-        <button
-          onClick={toggleThemeMode}
-          aria-label="Toggle theme"
-          style={{
-            flex: expanded ? 1 : undefined,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: 10,
-            borderRadius: 10,
-            border: '1px solid var(--border-default)',
-            background: 'var(--bg-surface-1)',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-          }}
-        >
-          {themeMode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          {expanded && <span style={{ fontSize: 13 }}>Theme</span>}
-        </button>
-        {!isMobile && (
+      {!isMobile && (
+        <div style={{ padding: '0 12px 12px', display: 'flex' }}>
           <motion.button
             onClick={toggleSidebar}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
             style={{
-              width: 40,
+              width: expanded ? '100%' : 40,
               height: 40,
+              margin: expanded ? 0 : '0 auto',
               borderRadius: 10,
               border: '1px solid var(--border-default)',
               background: 'var(--bg-surface-1)',
@@ -237,8 +221,8 @@ export function LiquidSidebar() {
               <ChevronLeft size={16} />
             </motion.span>
           </motion.button>
-        )}
-      </div>
+        </div>
+      )}
     </motion.aside>
   );
 

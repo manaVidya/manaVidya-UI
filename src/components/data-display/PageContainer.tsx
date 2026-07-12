@@ -11,7 +11,7 @@ export function PageContainer({ children }: { children: ReactNode }) {
       variants={staggerContainer(0.06)}
       initial="hidden"
       animate="visible"
-      sx={{ maxWidth: 1100, mx: 'auto' }}
+      sx={{ maxWidth: 1600, mx: 'auto' }}
     >
       {children}
     </MotionBox>

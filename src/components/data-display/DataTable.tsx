@@ -38,7 +38,7 @@ export function DataTable<T extends { id: string }>({
 }: DataTableProps<T>) {
   return (
     <motion.div variants={slideUp}>
-      <Card sx={{ borderRadius: 3, background: 'var(--bg-surface-1)', overflow: 'hidden' }}>
+      <Card sx={{ borderRadius: '10px', background: 'var(--bg-surface-1)', overflow: 'hidden' }}>
         <TableContainer sx={{ maxWidth: '100%', overflowX: 'auto' }}>
           <Table size="small">
             <TableHead>

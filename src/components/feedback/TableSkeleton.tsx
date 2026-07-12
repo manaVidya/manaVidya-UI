@@ -25,7 +25,7 @@ interface TableSkeletonProps {
 export function TableSkeleton({ columns, rows = 6 }: TableSkeletonProps) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-      <Card sx={{ borderRadius: 3, background: 'var(--bg-surface-1)', overflow: 'hidden' }}>
+      <Card sx={{ borderRadius: '10px', background: 'var(--bg-surface-1)', overflow: 'hidden' }}>
         <TableContainer sx={{ maxWidth: '100%', overflowX: 'auto' }}>
           <Table size="small">
             <TableHead>
