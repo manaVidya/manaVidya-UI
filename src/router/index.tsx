@@ -6,7 +6,7 @@ import { RequirePortal } from '../app/RequirePortal';
 import { PublicOnlyRoute } from '../app/PublicOnlyRoute';
 import { AppShellSidebar } from '../layouts/sidebar/AppShellSidebar';
 
-const LandingPage = lazy(() => import('../pages/public/LandingPage'));
+const DemoPage = lazy(() => import('../pages/public/DemoPage'));
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
 const ProfilePage = lazy(() => import('../pages/shared/ProfilePage'));
@@ -80,14 +80,12 @@ const router = createBrowserRouter([
     path: '/',
     element: <RootLayout />,
     children: [
-      // Landing page needs scroll work before it's ready to be the front door again —
-      // opens straight into the login screen for now. Still reachable at /home meanwhile.
       {
         index: true,
-        element: (
+        element: s(
           <PublicOnlyRoute>
-            <Navigate to="/login" replace />
-          </PublicOnlyRoute>
+            <DemoPage />
+          </PublicOnlyRoute>,
         ),
       },
       {
@@ -98,7 +96,8 @@ const router = createBrowserRouter([
           </PublicOnlyRoute>,
         ),
       },
-      { path: 'home', element: s(<LandingPage />) },
+      { path: 'home', element: <Navigate to="/" replace /> },
+      { path: 'demo', element: <Navigate to="/" replace /> },
       {
         path: 'admin',
         element: (

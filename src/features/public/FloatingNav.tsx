@@ -1,6 +1,7 @@
 import { Box, Button, Stack } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import { School } from 'lucide-react';
 
 function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -73,9 +74,14 @@ export function FloatingNav() {
                 height: 26,
                 borderRadius: 1.5,
                 flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 background: 'linear-gradient(135deg, var(--portal-400), var(--portal-600))',
               }}
-            />
+            >
+              <School size={15} color="#fff" strokeWidth={2.25} />
+            </Box>
             <Box
               component="span"
               sx={{

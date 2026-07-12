@@ -1,15 +1,17 @@
 import { Box, Link as MuiLink, Stack, Typography } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { Mail } from 'lucide-react';
+import { Mail, School } from 'lucide-react';
 
-export function SiteFooter() {
+/** `transparentBg` lets a page behind it (e.g. the demo page's fixed gradient wash)
+ *  show through instead of this footer's own solid fill. */
+export function SiteFooter({ transparentBg = false }: { transparentBg?: boolean }) {
   return (
     <Box
       id="contact"
       component="footer"
       sx={{
         borderTop: '1px solid var(--border-subtle)',
-        background: '#09090F',
+        background: transparentBg ? 'transparent' : '#09090F',
         pt: { xs: 8, md: 10 },
         pb: 5,
         px: { xs: 3, md: 6 },
@@ -33,9 +35,14 @@ export function SiteFooter() {
                 width: 28,
                 height: 28,
                 borderRadius: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 background: 'linear-gradient(135deg, var(--portal-400), var(--portal-600))',
               }}
-            />
+            >
+              <School size={16} color="#fff" strokeWidth={2.25} />
+            </Box>
             <Typography sx={{ fontWeight: 700, fontSize: 17, color: '#fff' }}>ManaVidya</Typography>
           </Stack>
           <Typography sx={{ fontSize: 14, color: '#9A9BBF', lineHeight: 1.7 }}>

@@ -1,0 +1,68 @@
+/* features/public/demoOverview.css
+ * Two effects for the /demo page:
+ *  1. A slow, color-shifting gradient wash behind the hero — plain CSS transform/opacity
+ *     animation (cheap, GPU-compositor-only), same technique as theme/portalGradientBackground.css.
+ *  2. A mouse-tracking "spotlight" on card hover — position written straight to the DOM via
+ *     a ref on mousemove (see DemoOverview.tsx), never through React state, so tracking the
+ *     cursor costs a single style write per frame, no re-renders.
+ */
+
+.demo-gradient-wash {
+  position: absolute;
+  inset: -30%;
+  z-index: 0;
+  pointer-events: none;
+  background: conic-gradient(from 0deg at 50% 50%, #6c63ff, #ff3d68, #ffb300, #00d4c8, #6c63ff);
+  filter: blur(140px);
+  opacity: 0.22;
+  will-change: transform;
+}
+
+/* Page-wide variant: fixed to the viewport (not sized to content height) so it's
+ * always fully covering — including the rubber-band overscroll past the top/bottom
+ * edge, which a content-sized absolute layer can't reach. */
+.demo-gradient-wash--fixed {
+  position: fixed;
+  inset: -10%;
+  z-index: -1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .demo-gradient-wash {
+    animation: demoGradientSpin 40s linear infinite;
+  }
+}
+
+@keyframes demoGradientSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.demo-spotlight-card {
+  position: relative;
+  isolation: isolate;
+}
+
+.demo-spotlight-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 250ms ease;
+  background: radial-gradient(
+    220px circle at var(--sx, 50%) var(--sy, 50%),
+    var(--spotlight-color, rgba(255, 255, 255, 0.16)),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.demo-spotlight-card:hover::before {
+  opacity: 1;
+}

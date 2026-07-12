@@ -7,11 +7,12 @@ import {
   TextField,
   Button,
   Alert,
+  IconButton,
   Link as MuiLink,
 } from '@mui/material';
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, Circle, Moon, Sun } from 'lucide-react';
 import { slideUp, staggerContainer } from '../../lib/motion';
 import { useAuth } from '../../hooks/useAuth';
 import * as authApi from '../../lib/authApi';
@@ -75,7 +76,7 @@ function PasswordChecklist({ value }: { value: string }) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setUser, logout } = useAuth();
+  const { setUser, logout, themeMode, toggleThemeMode } = useAuth();
 
   const [step, setStep] = useState<Step>('login');
   const [mobileNumber, setMobileNumber] = useState('');
@@ -244,6 +245,26 @@ export default function LoginPage() {
       }}
     >
       <LoginAura />
+
+      <IconButton
+        onClick={toggleThemeMode}
+        aria-label={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        sx={{
+          position: 'fixed',
+          top: 16,
+          right: 16,
+          zIndex: 2,
+          width: 40,
+          height: 40,
+          border: '1px solid var(--border-default)',
+          background: 'var(--nav-glass-bg)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        {themeMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+      </IconButton>
 
       <MotionStack
         variants={staggerContainer(0.08)}
