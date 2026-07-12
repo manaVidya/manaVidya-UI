@@ -2,34 +2,32 @@ import { useRef, useState, type ChangeEvent } from 'react';
 import {
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControl,
-  FormControlLabel,
   Grid,
   IconButton,
   InputLabel as MuiInputLabel,
   MenuItem,
-  OutlinedInput,
   Select,
-  Switch,
   TextField as MuiTextField,
   Typography,
 } from '@mui/material';
 import { Camera, Plus, Save, X } from 'lucide-react';
-import type { CreateTeacherPayload, TeacherDetail } from '../../lib/teachersApi';
-import { SUBJECT_OPTIONS } from '../../lib/subjects';
+import type {
+  CreateNonTeachingStaffPayload,
+  NonTeachingStaffDetail,
+} from '../../lib/nonTeachingStaffApi';
 
-interface CreateTeacherDialogProps {
+interface CreateNonTeachingStaffDialogProps {
   open: boolean;
   onClose: () => void;
   /** Receives the API-shaped payload; throw/reject to keep the dialog open on failure. */
-  onSubmit: (payload: CreateTeacherPayload) => Promise<void>;
+  onSubmit: (payload: CreateNonTeachingStaffPayload) => Promise<void>;
   /** When set, the dialog opens prefilled in edit mode. */
-  initial?: TeacherDetail | null;
+  initial?: NonTeachingStaffDetail | null;
 }
 
 const GENDERS = ['Male', 'Female', 'Other'];
@@ -52,20 +50,29 @@ const STATES = [
   'Haryana',
 ];
 const COUNTRIES = ['India', 'Other'];
-const DEPARTMENTS = ['Primary', 'Secondary', 'Higher Secondary', 'Administration'];
-const DESIGNATIONS = [
-  'Teacher',
-  'Head of Department',
-  'Principal',
-  'Vice Principal',
+const STAFF_DEPARTMENTS = [
+  'Accounts',
+  'Administration',
+  'Library',
+  'Maintenance',
+  'Security',
+  'Transport',
+  'IT',
+];
+const NON_TEACHING_DESIGNATIONS = [
+  'Accountant',
+  'Clerk',
+  'Office Assistant',
+  'Receptionist',
   'Librarian',
-  'Lab Assistant',
+  'IT Support',
+  'Security Guard',
+  'Driver',
+  'Peon',
+  'AGM',
+  'GM',
 ];
 const EMPLOYEE_TYPES = ['Full Time', 'Part Time', 'Contract'];
-const EMPLOYMENT_STATUSES = ['Active', 'On Leave', 'Inactive'];
-const ACADEMIC_YEARS = ['2024-25', '2025-26', '2026-27'];
-const CLASS_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-const SECTION_OPTIONS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 /** UI labels ('Male') ↔ API enums ('MALE'). */
 const GENDER_TO_API: Record<string, 'MALE' | 'FEMALE' | 'OTHER'> = {
@@ -81,11 +88,11 @@ const GENDER_FROM_API: Record<string, string> = {
 
 const toDateInput = (value: string | null | undefined) => (value ?? '').slice(0, 10);
 
-function getInitialForm(initial?: TeacherDetail | null) {
-  const [firstName = '', ...restName] = (initial?.user.name ?? '').split(' ');
+function getInitialForm(initial?: NonTeachingStaffDetail | null) {
+  const [firstName = '', ...restName] = (initial?.name ?? '').split(' ');
 
   return {
-    employeeId: initial?.employeeCode ?? `EMP${String(Date.now()).slice(-6)}`,
+    employeeId: initial?.employeeCode ?? `STAFF${String(Date.now()).slice(-6)}`,
     firstName,
     lastName: restName.join(' '),
     gender: initial?.gender ? (GENDER_FROM_API[initial.gender] ?? '') : '',
@@ -93,9 +100,9 @@ function getInitialForm(initial?: TeacherDetail | null) {
     bloodGroup: initial?.bloodGroup ?? '',
     aadhaar: initial?.aadhaar ?? '',
     profilePhoto: '',
-    mobile: initial?.user.mobileNumber ?? '',
+    mobile: initial?.mobileNumber ?? '',
     alternateMobile: initial?.alternateMobile ?? '',
-    email: initial?.user.email ?? '',
+    email: initial?.email ?? '',
     addressLine1: initial?.address?.line1 ?? '',
     addressLine2: initial?.address?.line2 ?? '',
     city: initial?.address?.city ?? '',
@@ -104,19 +111,10 @@ function getInitialForm(initial?: TeacherDetail | null) {
     pincode: initial?.address?.pincode ?? '',
     department: initial?.department ?? '',
     designation: initial?.designation ?? '',
-    subjects: initial?.subjects ?? [],
     employeeType: initial?.employeeType ?? '',
     joiningDate: toDateInput(initial?.joiningDate),
     experience: initial?.experienceYears != null ? String(initial.experienceYears) : '',
-    qualification: initial?.qualification ?? '',
-    previousSchool: initial?.previousSchool ?? '',
     salary: initial?.salary ?? '',
-    employmentStatus: 'Active',
-    classes: [] as string[],
-    sections: [] as string[],
-    classTeacher: false,
-    subjectsAssigned: initial?.subjects ?? [],
-    academicYear: initial?.academicYear ?? '',
   };
 }
 
@@ -125,33 +123,27 @@ type FormState = ReturnType<typeof getInitialForm>;
 /** Last-10-digits sanitizer — tolerates "+91 90000 00000" style input. */
 const toMobile = (value: string) => value.replace(/\D/g, '').slice(-10);
 
-// classes/sections/classTeacher/employmentStatus stay UI-only for now — class
-// assignment is a separate module (Class.classTeacherId) and isn't sent on create.
-function buildPayload(form: FormState): CreateTeacherPayload {
+function buildPayload(form: FormState): CreateNonTeachingStaffPayload {
   const hasAddress =
     form.addressLine1 || form.addressLine2 || form.city || form.state || form.pincode;
 
   return {
-    teacher: {
+    staff: {
       name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
       mobileNumber: toMobile(form.mobile),
       alternateMobile: form.alternateMobile.trim() || undefined,
       email: form.email.trim() || undefined,
       employeeCode: form.employeeId.trim(),
-      gender: GENDER_TO_API[form.gender],
+      designation: form.designation,
+      department: form.department || undefined,
+      gender: form.gender ? GENDER_TO_API[form.gender] : undefined,
       dob: form.dob || undefined,
       bloodGroup: form.bloodGroup || undefined,
       aadhaar: form.aadhaar.trim() || undefined,
-      department: form.department || undefined,
-      designation: form.designation || undefined,
-      subjects: form.subjects,
       employeeType: form.employeeType || undefined,
       joiningDate: form.joiningDate || undefined,
       experienceYears: form.experience ? Number(form.experience) : undefined,
-      qualification: form.qualification.trim() || undefined,
-      previousSchool: form.previousSchool.trim() || undefined,
       salary: form.salary ? Number(form.salary) : undefined,
-      academicYear: form.academicYear || undefined,
     },
     address: hasAddress
       ? {
@@ -193,12 +185,12 @@ function StableInputLabel(props: React.ComponentProps<typeof MuiInputLabel>) {
   return <MuiInputLabel {...props} shrink />;
 }
 
-export function CreateTeacherDialog({
+export function CreateNonTeachingStaffDialog({
   open,
   onClose,
   onSubmit,
   initial,
-}: CreateTeacherDialogProps) {
+}: CreateNonTeachingStaffDialogProps) {
   const isEdit = Boolean(initial);
   const [form, setForm] = useState<FormState>(() => getInitialForm(initial));
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -210,7 +202,7 @@ export function CreateTeacherDialog({
   };
 
   const handleTextChange = (field: keyof FormState) => (e: ChangeEvent<HTMLInputElement>) => {
-    updateField(field, e.target.value as FormState[typeof field]);
+    updateField(field, e.target.value);
   };
 
   const handleBlur = (field: keyof FormState) => () => {
@@ -225,30 +217,16 @@ export function CreateTeacherDialog({
   };
 
   const isRequiredString = (value: string) => value.trim().length > 0;
-  const isRequiredArray = (value: string[]) => value.length > 0;
 
-  const requiredFields: {
-    key: keyof FormState;
-    validate: (v: FormState[keyof FormState]) => boolean;
-  }[] = [
-    { key: 'employeeId', validate: (v) => isRequiredString(v as string) },
-    { key: 'firstName', validate: (v) => isRequiredString(v as string) },
-    { key: 'lastName', validate: (v) => isRequiredString(v as string) },
-    { key: 'gender', validate: (v) => isRequiredString(v as string) },
-    { key: 'dob', validate: (v) => isRequiredString(v as string) },
-    { key: 'mobile', validate: (v) => isRequiredString(v as string) },
-    { key: 'department', validate: (v) => isRequiredString(v as string) },
-    { key: 'designation', validate: (v) => isRequiredString(v as string) },
-    { key: 'subjects', validate: (v) => isRequiredArray(v as string[]) },
-    { key: 'employeeType', validate: (v) => isRequiredString(v as string) },
-    { key: 'employmentStatus', validate: (v) => isRequiredString(v as string) },
-    { key: 'classes', validate: (v) => isRequiredArray(v as string[]) },
-    { key: 'sections', validate: (v) => isRequiredArray(v as string[]) },
-    { key: 'subjectsAssigned', validate: (v) => isRequiredArray(v as string[]) },
-    { key: 'academicYear', validate: (v) => isRequiredString(v as string) },
+  const requiredFields: (keyof FormState)[] = [
+    'employeeId',
+    'firstName',
+    'lastName',
+    'mobile',
+    'designation',
   ];
 
-  const canSubmit = requiredFields.every(({ key, validate }) => validate(form[key]));
+  const canSubmit = requiredFields.every((key) => isRequiredString(form[key]));
 
   // Success/failure feedback comes entirely from the global toast (the API's own
   // message) — this handler only closes/resets on success and stays open on failure.
@@ -275,11 +253,8 @@ export function CreateTeacherDialog({
     onClose();
   };
 
-  const renderError = (field: keyof FormState, message: string) => {
-    return touched[field] && !requiredFields.find((r) => r.key === field)?.validate(form[field])
-      ? message
-      : '';
-  };
+  const renderError = (field: keyof FormState, message: string) =>
+    touched[field] && !isRequiredString(form[field]) ? message : '';
 
   return (
     <Dialog
@@ -292,9 +267,7 @@ export function CreateTeacherDialog({
           sx: {
             background: 'var(--bg-surface-2)',
             border: '1px solid var(--border-default)',
-            borderRadius: 3,
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+            borderRadius: '10px',
             maxHeight: '90vh',
           },
         },
@@ -310,7 +283,7 @@ export function CreateTeacherDialog({
         }}
       >
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          {isEdit ? `Edit Teacher — ${initial?.displayId ?? ''}` : 'Create Teacher'}
+          {isEdit ? `Edit Staff — ${initial?.displayId ?? ''}` : 'Create Non-Teaching Staff'}
         </Typography>
         <IconButton onClick={handleClose} sx={{ color: 'var(--text-secondary)' }}>
           <X size={20} />
@@ -319,7 +292,7 @@ export function CreateTeacherDialog({
 
       <DialogContent dividers sx={{ overflowY: 'auto' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Fill in the teacher profile. Fields marked with * are required.
+          Fill in the staff profile. Fields marked with * are required.
         </Typography>
 
         {/* Personal Information */}
@@ -360,14 +333,14 @@ export function CreateTeacherDialog({
           </Grid>
 
           <Grid size={{ xs: 12, md: 4 }}>
-            <FormControl fullWidth error={!!renderError('gender', 'Required')}>
-              <StableInputLabel>Gender *</StableInputLabel>
+            <FormControl fullWidth>
+              <StableInputLabel>Gender</StableInputLabel>
               <Select
                 value={form.gender}
                 onChange={(e) => updateField('gender', e.target.value)}
-                onBlur={handleBlur('gender')}
-                label="Gender *"
+                label="Gender"
               >
+                <MenuItem value="">None</MenuItem>
                 {GENDERS.map((g) => (
                   <MenuItem key={g} value={g}>
                     {g}
@@ -378,14 +351,12 @@ export function CreateTeacherDialog({
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <StableTextField
-              label="Date of Birth *"
+              label="Date of Birth"
               type="date"
               fullWidth
               value={form.dob}
               onChange={handleTextChange('dob')}
-              onBlur={handleBlur('dob')}
-              error={!!renderError('dob', 'Required')}
-              helperText={renderError('dob', 'Date of birth is required')}
+              placeholder="Optional"
               slotProps={{
                 htmlInput: { max: new Date().toISOString().split('T')[0] },
                 inputLabel: { shrink: true },
@@ -582,26 +553,9 @@ export function CreateTeacherDialog({
           </Grid>
         </Grid>
 
-        {/* Professional Information */}
-        <SectionHeader title="3. Professional Information" />
+        {/* Employment Details */}
+        <SectionHeader title="3. Employment Details" />
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <FormControl fullWidth error={!!renderError('department', 'Required')}>
-              <StableInputLabel>Department *</StableInputLabel>
-              <Select
-                value={form.department}
-                onChange={(e) => updateField('department', e.target.value)}
-                onBlur={handleBlur('department')}
-                label="Department *"
-              >
-                {DEPARTMENTS.map((d) => (
-                  <MenuItem key={d} value={d}>
-                    {d}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <FormControl fullWidth error={!!renderError('designation', 'Required')}>
               <StableInputLabel>Designation *</StableInputLabel>
@@ -611,7 +565,24 @@ export function CreateTeacherDialog({
                 onBlur={handleBlur('designation')}
                 label="Designation *"
               >
-                {DESIGNATIONS.map((d) => (
+                {NON_TEACHING_DESIGNATIONS.map((d) => (
+                  <MenuItem key={d} value={d}>
+                    {d}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormControl fullWidth>
+              <StableInputLabel>Department</StableInputLabel>
+              <Select
+                value={form.department}
+                onChange={(e) => updateField('department', e.target.value)}
+                label="Department"
+              >
+                <MenuItem value="">None</MenuItem>
+                {STAFF_DEPARTMENTS.map((d) => (
                   <MenuItem key={d} value={d}>
                     {d}
                   </MenuItem>
@@ -627,6 +598,7 @@ export function CreateTeacherDialog({
                 onChange={(e) => updateField('employeeType', e.target.value)}
                 label="Employee Type"
               >
+                <MenuItem value="">None</MenuItem>
                 {EMPLOYEE_TYPES.map((t) => (
                   <MenuItem key={t} value={t}>
                     {t}
@@ -634,41 +606,6 @@ export function CreateTeacherDialog({
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 6 }}>
-            <FormControl fullWidth error={!!renderError('subjects', 'Required')}>
-              <StableInputLabel>Subjects *</StableInputLabel>
-              <Select
-                multiple
-                value={form.subjects}
-                onChange={(e) => updateField('subjects', e.target.value as string[])}
-                onBlur={handleBlur('subjects')}
-                input={<OutlinedInput label="Subjects *" />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
-                    ))}
-                  </Box>
-                )}
-              >
-                {SUBJECT_OPTIONS.map((s) => (
-                  <MenuItem key={s} value={s}>
-                    {s}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <StableTextField
-              label="Qualification"
-              fullWidth
-              value={form.qualification}
-              onChange={handleTextChange('qualification')}
-              placeholder="Optional"
-            />
           </Grid>
 
           <Grid size={{ xs: 12, md: 4 }}>
@@ -694,16 +631,6 @@ export function CreateTeacherDialog({
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <StableTextField
-              label="Previous School"
-              fullWidth
-              value={form.previousSchool}
-              onChange={handleTextChange('previousSchool')}
-              placeholder="Optional"
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 4 }}>
-            <StableTextField
               label="Salary"
               type="number"
               fullWidth
@@ -711,132 +638,6 @@ export function CreateTeacherDialog({
               onChange={handleTextChange('salary')}
               placeholder="Optional"
               slotProps={{ htmlInput: { min: 0 } }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <FormControl fullWidth>
-              <StableInputLabel>Employment Status</StableInputLabel>
-              <Select
-                value={form.employmentStatus}
-                onChange={(e) => updateField('employmentStatus', e.target.value)}
-                label="Employment Status"
-              >
-                {EMPLOYMENT_STATUSES.map((s) => (
-                  <MenuItem key={s} value={s}>
-                    {s}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-
-        {/* Class Assignment */}
-        <SectionHeader title="4. Class Assignment" />
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <FormControl fullWidth error={!!renderError('classes', 'Required')}>
-              <StableInputLabel>Class *</StableInputLabel>
-              <Select
-                multiple
-                value={form.classes}
-                onChange={(e) => updateField('classes', e.target.value as string[])}
-                onBlur={handleBlur('classes')}
-                input={<OutlinedInput label="Class *" />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
-                    ))}
-                  </Box>
-                )}
-              >
-                {CLASS_OPTIONS.map((c) => (
-                  <MenuItem key={c} value={c}>
-                    Class {c}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <FormControl fullWidth error={!!renderError('sections', 'Required')}>
-              <StableInputLabel>Section *</StableInputLabel>
-              <Select
-                multiple
-                value={form.sections}
-                onChange={(e) => updateField('sections', e.target.value as string[])}
-                onBlur={handleBlur('sections')}
-                input={<OutlinedInput label="Section *" />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
-                    ))}
-                  </Box>
-                )}
-              >
-                {SECTION_OPTIONS.map((s) => (
-                  <MenuItem key={s} value={s}>
-                    Section {s}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <FormControl fullWidth>
-              <StableInputLabel>Academic Year *</StableInputLabel>
-              <Select
-                value={form.academicYear}
-                onChange={(e) => updateField('academicYear', e.target.value)}
-                onBlur={handleBlur('academicYear')}
-                label="Academic Year *"
-              >
-                {ACADEMIC_YEARS.map((y) => (
-                  <MenuItem key={y} value={y}>
-                    {y}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 6 }}>
-            <FormControl fullWidth error={!!renderError('subjectsAssigned', 'Required')}>
-              <StableInputLabel>Subjects Assigned *</StableInputLabel>
-              <Select
-                multiple
-                value={form.subjectsAssigned}
-                onChange={(e) => updateField('subjectsAssigned', e.target.value as string[])}
-                onBlur={handleBlur('subjectsAssigned')}
-                input={<OutlinedInput label="Subjects Assigned *" />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
-                    ))}
-                  </Box>
-                )}
-              >
-                {SUBJECT_OPTIONS.map((s) => (
-                  <MenuItem key={s} value={s}>
-                    {s}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={form.classTeacher}
-                  onChange={(e) => updateField('classTeacher', e.target.checked)}
-                />
-              }
-              label="Class Teacher"
-              sx={{ mt: 1 }}
             />
           </Grid>
         </Grid>
@@ -858,7 +659,7 @@ export function CreateTeacherDialog({
               : 'Creating…'
             : isEdit
               ? 'Save Changes'
-              : 'Create Teacher'}
+              : 'Create Staff'}
         </Button>
       </DialogActions>
     </Dialog>
