@@ -15,7 +15,10 @@ const ProfilePage = lazy(() => import('../pages/shared/ProfilePage'));
 const AdminDashboardPage = lazy(() => import('../pages/admin/DashboardPage'));
 const StudentsPage = lazy(() => import('../pages/admin/StudentsPage'));
 const TeachersPage = lazy(() => import('../pages/admin/TeachersPage'));
+const StaffPage = lazy(() => import('../pages/admin/StaffPage'));
+const NonTeachingStaffPage = lazy(() => import('../pages/admin/NonTeachingStaffPage'));
 const ClassesPage = lazy(() => import('../pages/admin/ClassesPage'));
+const ClassDetailPage = lazy(() => import('../pages/admin/ClassDetailPage'));
 const AdminTimetablePage = lazy(() => import('../pages/admin/TimetablePage'));
 const AdminSyllabusPage = lazy(() => import('../pages/admin/SyllabusPage'));
 const AdminAssignmentsPage = lazy(() => import('../pages/admin/AssignmentsPage'));
@@ -108,7 +111,11 @@ const router = createBrowserRouter([
           { path: 'profile', element: s(<ProfilePage />) },
           { path: 'students', element: s(<StudentsPage />) },
           { path: 'teachers', element: s(<TeachersPage />) },
+          { path: 'staff', element: s(<StaffPage />) },
+          { path: 'staff/teaching', element: s(<TeachersPage />) },
+          { path: 'staff/non-teaching', element: s(<NonTeachingStaffPage />) },
           { path: 'classes', element: s(<ClassesPage />) },
+          { path: 'classes/:id', element: s(<ClassDetailPage />) },
           { path: 'timetable', element: s(<AdminTimetablePage />) },
           { path: 'syllabus', element: s(<AdminSyllabusPage />) },
           { path: 'assignments', element: s(<AdminAssignmentsPage />) },

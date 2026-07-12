@@ -1,53 +1,54 @@
 import { useState } from 'react';
-import { Button, Chip, IconButton, Stack, Tooltip } from '@mui/material';
+import { Button, Chip, CircularProgress, IconButton, Stack, Tooltip } from '@mui/material';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../../components/data-display/PageContainer';
 import { PageHeader } from '../../components/data-display/PageHeader';
 import { DataTable } from '../../components/data-display/DataTable';
-import { CreateClassDialog } from '../../components/data-display/CreateClassDialog';
+import { CreateNonTeachingStaffDialog } from '../../components/data-display/CreateNonTeachingStaffDialog';
 import { TableSkeleton } from '../../components/feedback/TableSkeleton';
 import { ConfirmDialog } from '../../components/feedback/ConfirmDialog';
 import {
-  createClass,
-  deleteClass,
-  fetchClasses,
-  updateClass,
-  type ClassListItem,
-  type ClassPayload,
-} from '../../lib/classesApi';
+  createNonTeachingStaff,
+  deleteNonTeachingStaff,
+  fetchNonTeachingStaff,
+  fetchNonTeachingStaffMember,
+  updateNonTeachingStaff,
+  type CreateNonTeachingStaffPayload,
+  type NonTeachingStaffDetail,
+  type NonTeachingStaffListItem,
+} from '../../lib/nonTeachingStaffApi';
 
-const TABLE_COLUMNS = ['Class', 'Academic Year', 'Class Teacher', 'Students', 'Actions'];
+const TABLE_COLUMNS = ['Staff ID', 'Name', 'Designation', 'Department', 'Phone', 'Actions'];
 
-export default function ClassesPage() {
-  const navigate = useNavigate();
+export default function NonTeachingStaffPage() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKey, setDialogKey] = useState(0);
-  const [editTarget, setEditTarget] = useState<ClassListItem | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ClassListItem | null>(null);
+  const [editTarget, setEditTarget] = useState<NonTeachingStaffDetail | null>(null);
+  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<NonTeachingStaffListItem | null>(null);
 
-  const { data: classes, isPending } = useQuery({
-    queryKey: ['classes'],
-    queryFn: fetchClasses,
+  const { data: staff, isPending } = useQuery({
+    queryKey: ['non-teaching-staff'],
+    queryFn: fetchNonTeachingStaff,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['classes'] });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['non-teaching-staff'] });
 
   // Toasts (success and error) come from the global interceptor showing the API's
   // own message — no toast calls needed here.
   const createMutation = useMutation({
-    mutationFn: createClass,
+    mutationFn: createNonTeachingStaff,
     onSuccess: invalidate,
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: ClassPayload }) =>
-      updateClass(id, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: CreateNonTeachingStaffPayload }) =>
+      updateNonTeachingStaff(id, payload),
     onSuccess: invalidate,
   });
   const deleteMutation = useMutation({
-    mutationFn: deleteClass,
+    mutationFn: deleteNonTeachingStaff,
     onSuccess: invalidate,
   });
 
@@ -57,13 +58,21 @@ export default function ClassesPage() {
     setDialogOpen(true);
   };
 
-  const openEdit = (row: ClassListItem) => {
-    setEditTarget(row);
-    setDialogKey((k) => k + 1);
-    setDialogOpen(true);
+  const openEdit = async (row: NonTeachingStaffListItem) => {
+    setLoadingEditId(row.id);
+    try {
+      const detail = await fetchNonTeachingStaffMember(row.id);
+      setEditTarget(detail);
+      setDialogKey((k) => k + 1);
+      setDialogOpen(true);
+    } catch {
+      // Error toast already shown by the interceptor.
+    } finally {
+      setLoadingEditId(null);
+    }
   };
 
-  const handleSubmit = async (payload: ClassPayload) => {
+  const handleSubmit = async (payload: CreateNonTeachingStaffPayload) => {
     if (editTarget) {
       await updateMutation.mutateAsync({ id: editTarget.id, payload });
     } else {
@@ -77,18 +86,20 @@ export default function ClassesPage() {
       await deleteMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
     } catch {
-      // Error toast already shown (e.g. "N student(s) enrolled"); keep the confirm open to retry.
+      // Error toast already shown; keep the confirm open so the user can retry.
     }
   };
 
   return (
     <PageContainer>
       <PageHeader
-        title="Classes & Sections"
-        subtitle={isPending ? 'Loading classes…' : `${classes?.length ?? 0} classes on record.`}
+        title="Non-Teaching Staff"
+        subtitle={
+          isPending ? 'Loading staff…' : `${staff?.length ?? 0} non-teaching staff on record.`
+        }
         action={
           <Button variant="contained" startIcon={<Plus size={18} />} onClick={openCreate}>
-            Create Class
+            Create Staff
           </Button>
         }
       />
@@ -97,16 +108,16 @@ export default function ClassesPage() {
         <TableSkeleton columns={TABLE_COLUMNS} />
       ) : (
         <DataTable
-          onRowClick={(r) => void navigate(`/admin/classes/${r.id}`)}
           columns={[
             {
-              key: 'name',
-              label: 'Class',
+              key: 'displayId',
+              label: 'Staff ID',
               render: (r) => (
                 <Chip
-                  label={`${r.name}-${r.section}`}
+                  label={r.displayId}
                   size="small"
                   sx={{
+                    fontFamily: 'monospace',
                     fontWeight: 700,
                     background: 'var(--bg-surface-3)',
                     color: 'var(--text-primary)',
@@ -114,35 +125,28 @@ export default function ClassesPage() {
                 />
               ),
             },
-            { key: 'academicYear', label: 'Academic Year' },
-            {
-              key: 'classTeacher',
-              label: 'Class Teacher',
-              render: (r) => r.classTeacher?.name ?? '—',
-            },
-            {
-              key: 'studentCount',
-              label: 'Students',
-              render: (r) => (r.capacity ? `${r.studentCount} / ${r.capacity}` : r.studentCount),
-            },
+            { key: 'name', label: 'Name' },
+            { key: 'designation', label: 'Designation' },
+            { key: 'department', label: 'Department', render: (r) => r.department ?? '—' },
+            { key: 'mobileNumber', label: 'Phone' },
             {
               key: 'actions',
               label: 'Actions',
               align: 'right',
               render: (r) => (
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  sx={{ justifyContent: 'flex-end' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
                   <Tooltip title="Edit">
                     <IconButton
                       size="small"
-                      onClick={() => openEdit(r)}
+                      onClick={() => void openEdit(r)}
+                      disabled={loadingEditId === r.id}
                       sx={{ color: 'var(--text-secondary)' }}
                     >
-                      <Pencil size={16} />
+                      {loadingEditId === r.id ? (
+                        <CircularProgress size={16} />
+                      ) : (
+                        <Pencil size={16} />
+                      )}
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete">
@@ -158,12 +162,12 @@ export default function ClassesPage() {
               ),
             },
           ]}
-          rows={classes ?? []}
-          emptyLabel="No classes yet — create the first one."
+          rows={staff ?? []}
+          emptyLabel="No non-teaching staff yet — create the first one."
         />
       )}
 
-      <CreateClassDialog
+      <CreateNonTeachingStaffDialog
         key={dialogKey}
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -173,8 +177,8 @@ export default function ClassesPage() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Delete class?"
-        message={`This permanently removes ${deleteTarget?.name ?? ''}-${deleteTarget?.section ?? ''}. Blocked automatically while students are still enrolled.`}
+        title="Delete staff member?"
+        message={`This permanently removes ${deleteTarget?.name ?? ''} (${deleteTarget?.displayId ?? ''}).`}
         busy={deleteMutation.isPending}
         onConfirm={() => void handleDelete()}
         onClose={() => setDeleteTarget(null)}

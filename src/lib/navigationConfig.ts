@@ -61,8 +61,8 @@ export const NAVIGATION_CONFIG: Record<PortalKey, NavSectionConfig[]> = {
         },
         {
           kind: 'item',
-          to: '/admin/teachers',
-          label: 'Teachers',
+          to: '/admin/staff',
+          label: 'Staff',
           icon: Users,
           rbacKey: 'teacher.manage',
         },

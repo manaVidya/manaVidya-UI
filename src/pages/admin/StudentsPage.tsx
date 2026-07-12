@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Chip, CircularProgress, IconButton, Stack, Tooltip } from '@mui/material';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { PageContainer } from '../../components/data-display/PageContainer';
 import { PageHeader } from '../../components/data-display/PageHeader';
 import { DataTable } from '../../components/data-display/DataTable';
@@ -30,6 +31,8 @@ const STATUS_COLOR: Record<string, { bg: string; fg: string }> = {
 
 export default function StudentsPage() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const classIdFilter = searchParams.get('classId');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKey, setDialogKey] = useState(0);
   const [editTarget, setEditTarget] = useState<StudentDetail | null>(null);
@@ -40,6 +43,22 @@ export default function StudentsPage() {
     queryKey: ['students'],
     queryFn: fetchStudents,
   });
+
+  const visibleStudents = useMemo(
+    () => (classIdFilter ? (students ?? []).filter((s) => s.classId === classIdFilter) : students),
+    [students, classIdFilter],
+  );
+  const filteredClassLabel =
+    classIdFilter && visibleStudents?.[0]
+      ? `${visibleStudents[0].className}-${visibleStudents[0].section}`
+      : null;
+
+  const clearClassFilter = () => {
+    setSearchParams((params) => {
+      params.delete('classId');
+      return params;
+    });
+  };
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['students'] });
 
@@ -101,13 +120,34 @@ export default function StudentsPage() {
     <PageContainer>
       <PageHeader
         title="Students"
-        subtitle={isPending ? 'Loading students…' : `${students?.length ?? 0} students on record.`}
+        subtitle={
+          isPending
+            ? 'Loading students…'
+            : classIdFilter
+              ? `${visibleStudents?.length ?? 0} student(s) in ${filteredClassLabel ?? 'this class'}.`
+              : `${students?.length ?? 0} students on record.`
+        }
         action={
           <Button variant="contained" startIcon={<Plus size={18} />} onClick={openCreate}>
             Create Student
           </Button>
         }
       />
+
+      {!isPending && classIdFilter && (
+        <Chip
+          label={`Filtered by class${filteredClassLabel ? `: ${filteredClassLabel}` : ''}`}
+          size="small"
+          onDelete={clearClassFilter}
+          deleteIcon={<X size={14} />}
+          sx={{
+            mb: 2,
+            background: 'var(--status-info-100)',
+            color: 'var(--status-info-500)',
+            fontWeight: 600,
+          }}
+        />
+      )}
 
       {isPending ? (
         <TableSkeleton columns={TABLE_COLUMNS} />
@@ -185,8 +225,12 @@ export default function StudentsPage() {
               ),
             },
           ]}
-          rows={students ?? []}
-          emptyLabel="No students yet — create the first one."
+          rows={visibleStudents ?? []}
+          emptyLabel={
+            classIdFilter
+              ? 'No students in this class yet.'
+              : 'No students yet — create the first one.'
+          }
         />
       )}
 

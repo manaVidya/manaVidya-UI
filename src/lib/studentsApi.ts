@@ -70,6 +70,7 @@ export interface StudentListItem {
   id: string;
   displayId: string;
   name: string;
+  classId: string;
   className: string;
   section: string;
   rollNo: string;

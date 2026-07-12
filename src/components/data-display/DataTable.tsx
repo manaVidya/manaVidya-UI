@@ -29,12 +29,15 @@ interface DataTableProps<T extends { id: string }> {
   columns: DataTableColumn<T>[];
   rows: T[];
   emptyLabel?: string;
+  /** When set, whole rows become clickable (cursor + hover cue) — e.g. drilling into a detail page. */
+  onRowClick?: (row: T) => void;
 }
 
 export function DataTable<T extends { id: string }>({
   columns,
   rows,
   emptyLabel = 'No records yet',
+  onRowClick,
 }: DataTableProps<T>) {
   return (
     <motion.div variants={slideUp}>
@@ -80,7 +83,14 @@ export function DataTable<T extends { id: string }>({
                 </TableRow>
               )}
               {rows.map((row) => (
-                <TableRow key={row.id} sx={{ '&:hover': { background: 'var(--bg-surface-2)' } }}>
+                <TableRow
+                  key={row.id}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  sx={{
+                    '&:hover': { background: 'var(--bg-surface-2)' },
+                    cursor: onRowClick ? 'pointer' : 'default',
+                  }}
+                >
                   {columns.map((col) => (
                     <TableCell
                       key={col.key}
