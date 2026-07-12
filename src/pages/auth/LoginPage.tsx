@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   Box,
   Typography,
@@ -9,15 +9,20 @@ import {
   Alert,
   Link as MuiLink,
 } from '@mui/material';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { slideUp, staggerContainer } from '../../lib/motion';
 import { useAuth } from '../../hooks/useAuth';
 import * as authApi from '../../lib/authApi';
 import { getErrorMessage } from '../../lib/getErrorMessage';
+import { LoginAura } from './LoginAura';
 
 const MotionStack = motion(Stack);
+const MotionCard = motion(Card);
+
+/** Caps how far the card tilts toward the cursor — kept small so it reads as tactile, not gimmicky. */
+const TILT_RANGE_DEG = 5;
 
 type Step = 'login' | 'reset-request' | 'reset-confirm' | 'first-login';
 
@@ -82,6 +87,30 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Magnetic card tilt — pointer offset from the card's centre drives a small
+  // spring-eased rotateX/rotateY. Motion values, not state, so tracking the
+  // pointer never triggers a React re-render.
+  const shouldReduceMotion = useReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const tiltX = useMotionValue(0);
+  const tiltY = useMotionValue(0);
+  const springX = useSpring(tiltX, { stiffness: 150, damping: 18, mass: 0.5 });
+  const springY = useSpring(tiltY, { stiffness: 150, damping: 18, mass: 0.5 });
+  const rotateX = useTransform(springY, [-0.5, 0.5], [TILT_RANGE_DEG, -TILT_RANGE_DEG]);
+  const rotateY = useTransform(springX, [-0.5, 0.5], [-TILT_RANGE_DEG, TILT_RANGE_DEG]);
+
+  function handleCardPointerMove(e: ReactMouseEvent<HTMLDivElement>) {
+    if (shouldReduceMotion || !cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    tiltX.set((e.clientX - rect.left) / rect.width - 0.5);
+    tiltY.set((e.clientY - rect.top) / rect.height - 0.5);
+  }
+
+  function handleCardPointerLeave() {
+    tiltX.set(0);
+    tiltY.set(0);
+  }
 
   function resetMessages() {
     setError(null);
@@ -206,6 +235,7 @@ export default function LoginPage() {
   return (
     <Box
       sx={{
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -213,12 +243,14 @@ export default function LoginPage() {
         p: 3,
       }}
     >
+      <LoginAura />
+
       <MotionStack
         variants={staggerContainer(0.08)}
         initial="hidden"
         animate="visible"
         spacing={4}
-        sx={{ alignItems: 'center', maxWidth: 420, width: '100%' }}
+        sx={{ position: 'relative', zIndex: 1, alignItems: 'center', maxWidth: 420, width: '100%' }}
       >
         <motion.div variants={slideUp} style={{ textAlign: 'center' }}>
           <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
@@ -233,11 +265,18 @@ export default function LoginPage() {
           </Typography>
         </motion.div>
 
-        <motion.div variants={slideUp} style={{ width: '100%' }}>
-          <Card
+        <motion.div
+          variants={slideUp}
+          style={{ width: '100%', perspective: 1000 }}
+          onMouseMove={handleCardPointerMove}
+          onMouseLeave={handleCardPointerLeave}
+        >
+          <MotionCard
+            ref={cardRef}
+            style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}
             sx={{
               width: '100%',
-              borderRadius: 3,
+              borderRadius: '10px',
               p: 4,
               border: '1px solid var(--portal-500)',
               background: 'var(--bg-surface-1)',
@@ -440,7 +479,7 @@ export default function LoginPage() {
                 </Button>
               </Stack>
             )}
-          </Card>
+          </MotionCard>
         </motion.div>
       </MotionStack>
     </Box>

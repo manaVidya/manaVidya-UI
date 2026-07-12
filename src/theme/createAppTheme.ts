@@ -105,6 +105,15 @@ export function createAppTheme(portal: PortalKey, mode: 'dark' | 'light'): Theme
           },
         },
       },
+      MuiBackdrop: {
+        styleOverrides: {
+          // Dialogs/drawers previously fell back to MUI's default 50%-black
+          // backdrop, which barely dims the page — skeletons and spinners
+          // behind an open dialog stayed clearly visible. Route it through
+          // the app's own --scrim token so it matches the mobile drawer scrim.
+          root: { backgroundColor: 'var(--scrim)' },
+        },
+      },
       MuiCssBaseline: {
         styleOverrides: {
           body: {

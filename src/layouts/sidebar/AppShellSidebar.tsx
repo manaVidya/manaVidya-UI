@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { LiquidSidebar } from './LiquidSidebar';
 import { CommandPalette } from '../shared/CommandPalette';
+import { UserDock } from '../shared/UserDock';
 import { useLayout, useLayoutStore } from '../../hooks/useLayout';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -9,9 +10,10 @@ const SIDEBAR_EXPANDED_WIDTH = 280;
 const SIDEBAR_COLLAPSED_WIDTH = 72;
 
 /**
- * The single app shell for every authenticated portal. There is no separate
- * top bar — search, theme toggle, notifications and profile all live in the
- * sidebar itself (see LiquidSidebar) to avoid duplicating controls.
+ * The single app shell for every authenticated portal. Navigation and search
+ * live in the sidebar (see LiquidSidebar); identity, account settings and
+ * theme switching live in the fixed top-right UserDock instead of a full
+ * top bar, so both stay reachable regardless of sidebar expanded state.
  */
 export function AppShellSidebar() {
   const { isMobile, sidebarExpanded } = useLayout();
@@ -29,6 +31,7 @@ export function AppShellSidebar() {
   return (
     <div style={{ minHeight: '100vh' }}>
       <LiquidSidebar />
+      <UserDock />
 
       {isMobile && (
         <button
@@ -64,7 +67,7 @@ export function AppShellSidebar() {
           minHeight: '100vh',
         }}
       >
-        <main style={{ padding: isMobile ? '76px 20px 24px' : 24 }}>
+        <main style={{ padding: isMobile ? '76px 20px 24px' : '88px 24px 24px' }}>
           <Outlet />
         </main>
       </div>
