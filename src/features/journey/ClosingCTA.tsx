@@ -4,8 +4,10 @@ import { motion } from 'framer-motion';
 import { fadeIn, staggerContainer } from '../../lib/motion';
 import { AboutSection } from './scenes';
 
-/** Final page section — sits after the feature showcase as the actual closing CTA. */
-export function ClosingCTA() {
+/** Final page section — sits after the feature showcase as the actual closing CTA.
+ *  `transparentBg` lets a page behind it (e.g. the demo page's fixed gradient wash)
+ *  show through instead of this section's own solid fill. */
+export function ClosingCTA({ transparentBg = false }: { transparentBg?: boolean }) {
   return (
     <motion.section
       variants={staggerContainer(0.1)}
@@ -19,7 +21,7 @@ export function ClosingCTA() {
         justifyContent: 'center',
         gap: 40,
         padding: '120px 24px',
-        background: '#09090F',
+        background: transparentBg ? 'transparent' : '#09090F',
       }}
     >
       <motion.div variants={fadeIn}>

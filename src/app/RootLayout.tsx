@@ -36,10 +36,14 @@ export function RootLayout() {
     document.documentElement.setAttribute('data-theme', themeMode);
   }, [themeMode]);
 
+  // The public landing experience uses its own full-page gradient wash (DemoPage.tsx) —
+  // the ambient brush-stroke wash behind it would just be a second, conflicting background.
+  const hideAmbientBackground = pathname === '/' || pathname === '/demo';
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <PortalGradientBackground />
+      {!hideAmbientBackground && <PortalGradientBackground />}
       <ToastViewport />
       <Outlet />
     </ThemeProvider>
