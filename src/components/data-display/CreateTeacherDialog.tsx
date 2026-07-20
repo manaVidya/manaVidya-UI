@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   Box,
   Button,
@@ -19,9 +19,11 @@ import {
   TextField as MuiTextField,
   Typography,
 } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import { Camera, Plus, Save, X } from 'lucide-react';
 import type { CreateTeacherPayload, TeacherDetail } from '../../lib/teachersApi';
-import { SUBJECT_OPTIONS } from '../../lib/subjects';
+import { fetchSubjects } from '../../lib/subjectsApi';
+import { ACADEMIC_YEARS } from '../../lib/academicYears';
 
 interface CreateTeacherDialogProps {
   open: boolean;
@@ -63,7 +65,6 @@ const DESIGNATIONS = [
 ];
 const EMPLOYEE_TYPES = ['Full Time', 'Part Time', 'Contract'];
 const EMPLOYMENT_STATUSES = ['Active', 'On Leave', 'Inactive'];
-const ACADEMIC_YEARS = ['2024-25', '2025-26', '2026-27'];
 const CLASS_OPTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 const SECTION_OPTIONS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -204,6 +205,16 @@ export function CreateTeacherDialog({
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: subjects, isPending: subjectsLoading } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: fetchSubjects,
+    enabled: open,
+  });
+  const activeSubjectNames = useMemo(
+    () => (subjects ?? []).filter((s) => s.isActive).map((s) => s.name),
+    [subjects],
+  );
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -637,7 +648,11 @@ export function CreateTeacherDialog({
           </Grid>
 
           <Grid size={{ xs: 12, md: 6 }}>
-            <FormControl fullWidth error={!!renderError('subjects', 'Required')}>
+            <FormControl
+              fullWidth
+              error={!!renderError('subjects', 'Required')}
+              disabled={subjectsLoading}
+            >
               <StableInputLabel>Subjects *</StableInputLabel>
               <Select
                 multiple
@@ -653,7 +668,7 @@ export function CreateTeacherDialog({
                   </Box>
                 )}
               >
-                {SUBJECT_OPTIONS.map((s) => (
+                {activeSubjectNames.map((s) => (
                   <MenuItem key={s} value={s}>
                     {s}
                   </MenuItem>
@@ -803,7 +818,11 @@ export function CreateTeacherDialog({
           </Grid>
 
           <Grid size={{ xs: 12, md: 6 }}>
-            <FormControl fullWidth error={!!renderError('subjectsAssigned', 'Required')}>
+            <FormControl
+              fullWidth
+              error={!!renderError('subjectsAssigned', 'Required')}
+              disabled={subjectsLoading}
+            >
               <StableInputLabel>Subjects Assigned *</StableInputLabel>
               <Select
                 multiple
@@ -819,7 +838,7 @@ export function CreateTeacherDialog({
                   </Box>
                 )}
               >
-                {SUBJECT_OPTIONS.map((s) => (
+                {activeSubjectNames.map((s) => (
                   <MenuItem key={s} value={s}>
                     {s}
                   </MenuItem>
