@@ -9,6 +9,7 @@ import type { ChildSummary } from '../types/rbac';
 export const MOCK_CHILDREN: ChildSummary[] = [
   {
     id: 'child-1',
+    classId: 'class-5a',
     name: 'Aditya Reddy',
     className: '5',
     section: 'A',
@@ -19,6 +20,7 @@ export const MOCK_CHILDREN: ChildSummary[] = [
   },
   {
     id: 'child-2',
+    classId: 'class-2b',
     name: 'Sneha Reddy',
     className: '2',
     section: 'B',

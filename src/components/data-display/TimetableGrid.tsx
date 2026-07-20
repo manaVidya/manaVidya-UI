@@ -1,60 +1,118 @@
-import { Box, Card, Typography } from '@mui/material';
+import { Box, Card, Skeleton, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 import { slideUp } from '../../lib/motion';
-import { MOCK_TIMETABLE, TIMETABLE_DAYS } from '../../lib/mockData';
+import { PERIOD_SLOTS, TIMETABLE_DAYS } from '../../lib/timetableConfig';
+import type { TimetableEntry } from '../../lib/timetableApi';
 
-export function TimetableGrid() {
+interface TimetableGridProps {
+  entries: TimetableEntry[];
+  isPending?: boolean;
+  isError?: boolean;
+  emptyLabel?: string;
+}
+
+function GridSkeleton() {
+  return (
+    <Card sx={{ borderRadius: 3, background: 'var(--bg-surface-1)', p: 2 }}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <Skeleton
+          key={i}
+          variant="rounded"
+          height={40}
+          sx={{ mb: 1, bgcolor: 'var(--bg-surface-3)' }}
+        />
+      ))}
+    </Card>
+  );
+}
+
+export function TimetableGrid({ entries, isPending, isError, emptyLabel }: TimetableGridProps) {
+  // O(1) lookup per cell instead of re-scanning `entries` for every (period, day) pair.
+  const byPeriodAndDay = useMemo(() => {
+    const map = new Map<string, TimetableEntry>();
+    for (const entry of entries) {
+      map.set(`${entry.periodNumber}-${entry.dayOfWeek}`, entry);
+    }
+    return map;
+  }, [entries]);
+
+  if (isPending) return <GridSkeleton />;
+
+  if (isError) {
+    return (
+      <Card sx={{ borderRadius: 3, background: 'var(--bg-surface-1)', p: 3 }}>
+        <Typography variant="body2" color="text.secondary">
+          Couldn&apos;t load the timetable.
+        </Typography>
+      </Card>
+    );
+  }
+
+  if (entries.length === 0) {
+    return (
+      <Card sx={{ borderRadius: 3, background: 'var(--bg-surface-1)', p: 3 }}>
+        <Typography variant="body2" color="text.secondary">
+          {emptyLabel ?? 'No timetable published yet.'}
+        </Typography>
+      </Card>
+    );
+  }
+
   return (
     <motion.div variants={slideUp}>
       <Card sx={{ borderRadius: 3, background: 'var(--bg-surface-1)', p: 2, overflowX: 'auto' }}>
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: `72px repeat(${TIMETABLE_DAYS.length}, minmax(88px, 1fr))`,
-            minWidth: 620,
+            gridTemplateColumns: `72px repeat(${TIMETABLE_DAYS.length}, minmax(96px, 1fr))`,
+            minWidth: 660,
           }}
         >
           <Box />
           {TIMETABLE_DAYS.map((day) => (
-            <Box key={day} sx={{ p: 1, textAlign: 'center' }}>
+            <Box key={day.key} sx={{ p: 1, textAlign: 'center' }}>
               <Typography
                 variant="caption"
                 sx={{ fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-tertiary)' }}
               >
-                {day.toUpperCase()}
+                {day.label.toUpperCase()}
               </Typography>
             </Box>
           ))}
 
-          {MOCK_TIMETABLE.map((period) => (
-            <Box key={period.time} sx={{ display: 'contents' }}>
+          {PERIOD_SLOTS.map((slot) => (
+            <Box key={slot.periodNumber || slot.label} sx={{ display: 'contents' }}>
               <Box sx={{ p: 1, display: 'flex', alignItems: 'center' }}>
                 <Typography variant="caption" color="text.secondary">
-                  {period.time}
+                  {slot.startTime}
                 </Typography>
               </Box>
-              {period.subjects.map((subject, i) => {
-                const isBreak = subject === 'Break';
+              {TIMETABLE_DAYS.map((day) => {
+                const entry = slot.isBreak
+                  ? undefined
+                  : byPeriodAndDay.get(`${slot.periodNumber}-${day.key}`);
                 return (
                   <Box
-                    key={i}
+                    key={day.key}
                     sx={{
                       m: 0.5,
                       p: 1,
                       borderRadius: 2,
                       textAlign: 'center',
-                      minHeight: 40,
+                      minHeight: 44,
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      background: isBreak
+                      background: slot.isBreak
                         ? 'transparent'
-                        : subject
+                        : entry
                           ? 'var(--bg-surface-2)'
                           : 'transparent',
-                      border: isBreak
+                      border: slot.isBreak
                         ? '1px dashed var(--border-default)'
-                        : subject
+                        : entry
                           ? '1px solid var(--border-subtle)'
                           : 'none',
                     }}
@@ -62,16 +120,24 @@ export function TimetableGrid() {
                     <Typography
                       variant="caption"
                       sx={{
-                        fontWeight: isBreak ? 400 : 600,
-                        color: isBreak
+                        fontWeight: slot.isBreak ? 400 : 600,
+                        color: slot.isBreak
                           ? 'var(--text-tertiary)'
-                          : subject
+                          : entry
                             ? 'var(--text-primary)'
                             : 'transparent',
                       }}
                     >
-                      {subject ?? '—'}
+                      {slot.isBreak ? 'Break' : (entry?.subject ?? '—')}
                     </Typography>
+                    {entry?.teacher && (
+                      <Typography
+                        variant="caption"
+                        sx={{ fontSize: 10, color: 'var(--text-tertiary)' }}
+                      >
+                        {entry.teacher.name}
+                      </Typography>
+                    )}
                   </Box>
                 );
               })}

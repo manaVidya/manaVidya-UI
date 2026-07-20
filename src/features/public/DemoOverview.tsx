@@ -336,10 +336,13 @@ export function DemoOverview() {
             {PORTAL_CARDS.map((card) => {
               const Icon = card.icon;
               return (
-                <motion.div key={card.key} variants={revealUp}>
+                <motion.div key={card.key} variants={revealUp} style={{ height: '100%' }}>
                   <SpotlightCard
                     accentColor={card.color}
                     style={{
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
                       padding: 24,
                       borderRadius: 16,
                       border: '1px solid rgba(255,255,255,0.08)',
@@ -423,10 +426,13 @@ export function DemoOverview() {
             {REALITIES.map((r) => {
               const Icon = r.icon;
               return (
-                <motion.div key={r.title} variants={revealUp}>
+                <motion.div key={r.title} variants={revealUp} style={{ height: '100%' }}>
                   <SpotlightCard
                     accentColor="#9D8FFF"
                     style={{
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
                       padding: 24,
                       borderRadius: 16,
                       border: '1px solid rgba(255,255,255,0.06)',

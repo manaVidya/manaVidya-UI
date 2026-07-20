@@ -78,6 +78,18 @@ export interface TeacherDetail {
     country: string | null;
     pincode: string | null;
   } | null;
+  /** Homeroom class(es) — at most one, Class.classTeacherId is unique. */
+  classesLed: {
+    id: string;
+    name: string;
+    section: string;
+    academicYear: string;
+  }[];
+  subjectAssignments: {
+    id: string;
+    subject: string;
+    class: { id: string; name: string; section: string; academicYear: string };
+  }[];
 }
 
 export async function fetchTeachers(): Promise<TeacherListItem[]> {

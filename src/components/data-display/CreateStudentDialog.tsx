@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { Plus, Save, X } from 'lucide-react';
 import type { CreateStudentPayload, StudentDetail } from '../../lib/studentsApi';
+import { ACADEMIC_YEARS } from '../../lib/academicYears';
 
 interface CreateStudentDialogProps {
   open: boolean;
@@ -54,7 +55,6 @@ const COUNTRIES = ['India', 'Other'];
 const MEDIUMS = ['English', 'Telugu', 'Hindi', 'Urdu', 'Tamil', 'Kannada'];
 const HOUSES = ['Red', 'Blue', 'Green', 'Yellow'];
 const STUDENT_STATUSES = ['Active', 'Transferred', 'Alumni', 'Suspended'];
-const ACADEMIC_YEARS = ['2024-25', '2025-26', '2026-27'];
 
 /** UI labels ('Male') ↔ API enums ('MALE'). */
 const GENDER_TO_API: Record<string, 'MALE' | 'FEMALE' | 'OTHER'> = {

@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Button, Chip, IconButton, Stack, Tooltip } from '@mui/material';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Button, FormControl, MenuItem, Select, Stack } from '@mui/material';
+import { Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../../components/data-display/PageContainer';
 import { PageHeader } from '../../components/data-display/PageHeader';
-import { DataTable } from '../../components/data-display/DataTable';
+import { ClassesTreeTable } from '../../components/data-display/ClassesTreeTable';
 import { CreateClassDialog } from '../../components/data-display/CreateClassDialog';
 import { TableSkeleton } from '../../components/feedback/TableSkeleton';
 import { ConfirmDialog } from '../../components/feedback/ConfirmDialog';
@@ -18,7 +18,9 @@ import {
   type ClassPayload,
 } from '../../lib/classesApi';
 
-const TABLE_COLUMNS = ['Class', 'Academic Year', 'Class Teacher', 'Students', 'Actions'];
+// Leading blank entry keeps the loading skeleton's header aligned with
+// ClassesTreeTable's chevron column once real data swaps in.
+const TABLE_COLUMNS = ['', 'Class', 'Academic Year', 'Class Teacher', 'Students', 'Actions'];
 
 export default function ClassesPage() {
   const navigate = useNavigate();
@@ -32,6 +34,20 @@ export default function ClassesPage() {
     queryKey: ['classes'],
     queryFn: fetchClasses,
   });
+
+  // Derived from whatever years are actually present in the fetched classes — no
+  // separate "current academic year" source exists anywhere in this app yet, and a
+  // year with zero classes has nothing to filter to regardless.
+  const availableYears = useMemo(
+    () => [...new Set((classes ?? []).map((c) => c.academicYear))].sort(),
+    [classes],
+  );
+  const [yearFilter, setYearFilter] = useState<string | null>(null);
+  const effectiveYear = yearFilter ?? availableYears.at(-1) ?? '';
+  const filteredClasses = useMemo(
+    () => (classes ?? []).filter((c) => !effectiveYear || c.academicYear === effectiveYear),
+    [classes, effectiveYear],
+  );
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['classes'] });
 
@@ -87,78 +103,34 @@ export default function ClassesPage() {
         title="Classes & Sections"
         subtitle={isPending ? 'Loading classes…' : `${classes?.length ?? 0} classes on record.`}
         action={
-          <Button variant="contained" startIcon={<Plus size={18} />} onClick={openCreate}>
-            Create Class
-          </Button>
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+            {availableYears.length > 0 && (
+              <FormControl size="small" sx={{ minWidth: 140 }}>
+                <Select value={effectiveYear} onChange={(e) => setYearFilter(e.target.value)}>
+                  <MenuItem value="">All Years</MenuItem>
+                  {availableYears.map((y) => (
+                    <MenuItem key={y} value={y}>
+                      {y}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+            <Button variant="contained" startIcon={<Plus size={18} />} onClick={openCreate}>
+              Create Class
+            </Button>
+          </Stack>
         }
       />
 
       {isPending ? (
         <TableSkeleton columns={TABLE_COLUMNS} />
       ) : (
-        <DataTable
+        <ClassesTreeTable
+          rows={filteredClasses}
+          onEdit={openEdit}
+          onDelete={setDeleteTarget}
           onRowClick={(r) => void navigate(`/admin/classes/${r.id}`)}
-          columns={[
-            {
-              key: 'name',
-              label: 'Class',
-              render: (r) => (
-                <Chip
-                  label={`${r.name}-${r.section}`}
-                  size="small"
-                  sx={{
-                    fontWeight: 700,
-                    background: 'var(--bg-surface-3)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-              ),
-            },
-            { key: 'academicYear', label: 'Academic Year' },
-            {
-              key: 'classTeacher',
-              label: 'Class Teacher',
-              render: (r) => r.classTeacher?.name ?? '—',
-            },
-            {
-              key: 'studentCount',
-              label: 'Students',
-              render: (r) => (r.capacity ? `${r.studentCount} / ${r.capacity}` : r.studentCount),
-            },
-            {
-              key: 'actions',
-              label: 'Actions',
-              align: 'right',
-              render: (r) => (
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  sx={{ justifyContent: 'flex-end' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Tooltip title="Edit">
-                    <IconButton
-                      size="small"
-                      onClick={() => openEdit(r)}
-                      sx={{ color: 'var(--text-secondary)' }}
-                    >
-                      <Pencil size={16} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      size="small"
-                      onClick={() => setDeleteTarget(r)}
-                      sx={{ color: 'var(--status-error-500)' }}
-                    >
-                      <Trash2 size={16} />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              ),
-            },
-          ]}
-          rows={classes ?? []}
           emptyLabel="No classes yet — create the first one."
         />
       )}

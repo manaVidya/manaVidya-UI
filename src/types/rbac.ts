@@ -2,6 +2,7 @@ export type PortalKey = 'admin' | 'teacher' | 'parent' | 'student';
 
 export interface ChildSummary {
   id: string;
+  classId: string;
   name: string;
   className: string;
   section: string;
@@ -26,4 +27,9 @@ export interface AuthUser {
   activeChildId?: string;
   /** True for auto-generated DOB passwords that haven't been changed yet */
   mustResetPassword?: boolean;
+  /** Caller's own Teacher.id — present only when the TEACHER role is held. */
+  teacherId?: string;
+  /** Caller's own Student.id/classId — present only when the STUDENT role is held. */
+  studentId?: string;
+  classId?: string;
 }

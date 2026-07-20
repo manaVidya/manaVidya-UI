@@ -22,6 +22,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, Save, X } from 'lucide-react';
 import type { ClassListItem, ClassPayload, ClassSubjectPayload } from '../../lib/classesApi';
 import { fetchTeachers, type TeacherListItem } from '../../lib/teachersApi';
+import { fetchSubjects } from '../../lib/subjectsApi';
 
 interface CreateClassDialogProps {
   open: boolean;
@@ -45,9 +46,8 @@ function getInitialForm(initial?: ClassListItem | null) {
     academicYear: initial?.academicYear ?? '',
     capacity: initial?.capacity ? String(initial.capacity) : '',
     classTeacherId: initial?.classTeacher?.id ?? '',
-    // A new class starts with no subjects — the picker only offers subjects that a
-    // real teacher in this school is qualified for, so there's no sensible default
-    // to pre-select before that data is loaded.
+    // A new class starts with no subjects — nothing in the school's catalog is a
+    // sensible default to pre-select before that data is loaded.
     subjects: (initial?.subjects.map((s) => ({
       subject: s.subject,
       teacherId: s.teacher?.id ?? '',
@@ -93,12 +93,17 @@ export function CreateClassDialog({ open, onClose, onSubmit, initial }: CreateCl
     enabled: open,
   });
 
-  // The subject picker's options come entirely from what teachers in this school are
-  // actually qualified to teach — no hardcoded subject list. A subject only appears
-  // here once at least one teacher has it in their own profile.
+  // The subject picker's options come from the school's standard subject catalog
+  // (Subjects module) — not from whatever individual teachers happen to have tagged
+  // on their own profile.
+  const { data: subjects, isPending: subjectsLoading } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: fetchSubjects,
+    enabled: open,
+  });
   const availableSubjects = useMemo(
-    () => [...new Set((teachers ?? []).flatMap((t) => t.subjects))].sort(),
-    [teachers],
+    () => (subjects ?? []).filter((s) => s.isActive).map((s) => s.name),
+    [subjects],
   );
 
   // Always includes the currently-assigned teacher for this subject even if their own
@@ -258,7 +263,7 @@ export function CreateClassDialog({ open, onClose, onSubmit, initial }: CreateCl
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12 }}>
-            <FormControl fullWidth disabled={teachersLoading}>
+            <FormControl fullWidth disabled={subjectsLoading}>
               <MuiInputLabel>Subjects</MuiInputLabel>
               <Select
                 multiple
@@ -280,7 +285,7 @@ export function CreateClassDialog({ open, onClose, onSubmit, initial }: CreateCl
               >
                 {availableSubjects.length === 0 ? (
                   <MenuItem value="" disabled>
-                    <em>No teacher has a subject assigned yet</em>
+                    <em>No active subjects configured for this school</em>
                   </MenuItem>
                 ) : (
                   availableSubjects.map((s) => (

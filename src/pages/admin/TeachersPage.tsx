@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Button, Chip, CircularProgress, IconButton, Stack, Tooltip } from '@mui/material';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageContainer } from '../../components/data-display/PageContainer';
 import { PageHeader } from '../../components/data-display/PageHeader';
 import { DataTable } from '../../components/data-display/DataTable';
 import { CreateTeacherDialog } from '../../components/data-display/CreateTeacherDialog';
+import { TeacherAssignmentsDrawer } from '../../components/data-display/TeacherAssignmentsDrawer';
 import { TableSkeleton } from '../../components/feedback/TableSkeleton';
 import { ConfirmDialog } from '../../components/feedback/ConfirmDialog';
 import {
@@ -28,6 +29,7 @@ export default function TeachersPage() {
   const [editTarget, setEditTarget] = useState<TeacherDetail | null>(null);
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeacherListItem | null>(null);
+  const [viewingTeacherId, setViewingTeacherId] = useState<string | null>(null);
 
   const { data: teachers, isPending } = useQuery({
     queryKey: ['teachers'],
@@ -139,6 +141,15 @@ export default function TeachersPage() {
               align: 'right',
               render: (r) => (
                 <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+                  <Tooltip title="View Assignments">
+                    <IconButton
+                      size="small"
+                      onClick={() => setViewingTeacherId(r.id)}
+                      sx={{ color: 'var(--text-secondary)' }}
+                    >
+                      <Eye size={16} />
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title="Edit">
                     <IconButton
                       size="small"
@@ -186,6 +197,12 @@ export default function TeachersPage() {
         busy={deleteMutation.isPending}
         onConfirm={() => void handleDelete()}
         onClose={() => setDeleteTarget(null)}
+      />
+
+      <TeacherAssignmentsDrawer
+        open={Boolean(viewingTeacherId)}
+        onClose={() => setViewingTeacherId(null)}
+        teacherId={viewingTeacherId}
       />
     </PageContainer>
   );
